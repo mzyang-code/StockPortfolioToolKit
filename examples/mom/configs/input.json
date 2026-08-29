@@ -1,0 +1,37 @@
+{
+  "vars": {
+    "CACHE": "/mnt/df7c3e41-975f-4e19-950b-bf2143e9dd82/MingzhiYang/stock_rag_cache",
+    "SIGNALS": "/mnt/df7c3e41-975f-4e19-950b-bf2143e9dd82/MingzhiYang/portfolio_tool_cache/signals"
+  },
+  "prices": {
+    "path": "${CACHE}/processed/processed_stock_data.feather",
+    "column_map": {
+      "date": "date",
+      "id": "id",
+      "close": "close",
+      "cap": "cap"
+    },
+    "restrict_to_signal_assets": true
+  },
+  "signals": [
+    {
+      "name": "MOM",
+      "path": "${SIGNALS}/signal_mom.feather",
+      "column_map": {
+        "date": "date",
+        "id": "id",
+        "alpha": "alpha",
+        "fwd_ret": "fwd_ret"
+      },
+      "dropna": true
+    }
+  ],
+  "references": [],
+  "calendar": {
+    "first_rebalance": "2021-01-04",
+    "last_rebalance": null,
+    "rebalance_freq": 5,
+    "source": "signals",
+    "auto_stride": true
+  }
+}

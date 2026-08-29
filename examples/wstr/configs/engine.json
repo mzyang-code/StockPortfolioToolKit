@@ -1,0 +1,20 @@
+{
+  "n_buckets": 10,
+  "min_names": 20,
+  "holding_days": 5,
+  "weights": ["ew", "vw", "logvw"],
+  "weight_options": {
+    "logvw": { "ln_floor": 1e-9 }
+  },
+  "include_references": true,
+  "reference_lag": 1,
+  "long_short": {
+    "enabled": true,
+    "label": "H-L",
+    "reverse": false
+  },
+  "forward_return": {
+    "source": "signals",
+    "clip_lower": null
+  }
+}

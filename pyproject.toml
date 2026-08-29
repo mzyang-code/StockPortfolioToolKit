@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stockportfoliotoolkit"
+version = "0.1.0"
+description = "Config-driven cross-sectional portfolio backtesting toolkit"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "myang682" }]
+keywords = ["quant", "portfolio", "backtest", "cross-section", "finance"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+    "numpy>=1.23",
+    "pandas>=1.5",
+    "pyarrow>=10.0",
+    "matplotlib>=3.6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.urls]
+Homepage = "https://github.com/myang682/stockportfoliotoolkit"
+Issues = "https://github.com/myang682/stockportfoliotoolkit/issues"
+
+[project.scripts]
+spt = "stockportfoliotoolkit.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

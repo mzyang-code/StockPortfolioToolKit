@@ -1,0 +1,24 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# 运行产物与缓存（均可由代码重新生成）
+outputs/
+logs/
+cache/
+*.feather
+*.parquet
+!tests/**/*.feather
+
+# 本地 AI 助手配置，不进仓库
+.claude/
+
+# 草稿 notebook（仅保留 quickstart_mom.ipynb 作为示例）
+jkx.ipynb
+test.ipynb

@@ -1,0 +1,65 @@
+{
+  "output_dir": "./outputs",
+  "export_returns": true,
+  "charts": [
+    {
+      "name": "cumulative_log_return",
+      "type": "cumulative_log_return",
+      "buckets": ["H-L", "REF"],
+      "weights": null,
+      "signals": null,
+      "color_mode": "palette",
+      "title": null,
+      "show_title": true,
+      "xlabel": null,
+      "ylabel": null,
+      "show_xlabel": false,
+      "show_ylabel": false,
+      "show_baseline": false,
+      "legend_loc": null,
+      "legend_ncol": null,
+      "legend_label": null
+    }
+  ],
+  "tables": [
+    {
+      "name": "metrics",
+      "type": "summary",
+      "buckets": null,
+      "weights": null,
+      "signals": null,
+      "percent_columns": ["ann_ret", "ann_vol", "max_drawdown", "turnover"],
+      "decimals": 3
+    }
+  ],
+  "style": {
+    "figsize": [12.0, 6.5],
+    "dpi": 160,
+    "linewidth": 1.7,
+    "grid_alpha": 0.25,
+    "title_fontsize": 13.0,
+    "label_fontsize": 11.0,
+    "legend_loc": "upper left",
+    "legend_fontsize": 10.0,
+    "legend_ncol": 1,
+    "legend_facecolor": "#ffffff",
+    "legend_edgecolor": "#808080",
+    "legend_alpha": 0.5,
+    "legend_linewidth": 0.8,
+    "baseline_color": "#444444",
+    "baseline_linewidth": 0.7,
+    "weight_labels": {
+      "EW": "Equal-Weighted",
+      "VW": "Value-Weighted",
+      "LOGVW": "Log-Cap-Weighted"
+    },
+    "palette": {},
+    "fallback_colors": ["#1f77b4", "#1a7f37", "#cf222e", "#bf8700", "#8250df", "#0969da"],
+    "reference_color": "#7f7f7f",
+    "reference_linestyle": "--",
+    "gradient_colormap": "viridis",
+    "gradient_range": [0.08, 0.92],
+    "highlight_color": "#d62728",
+    "highlight_linewidth": 2.6
+  }
+}

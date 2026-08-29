@@ -1,0 +1,20 @@
+{
+  "metrics": ["ann_ret", "ann_vol", "sharpe", "max_drawdown", "total_equity", "hit_rate"],
+  "periods_per_year": null,
+  "trading_days_per_year": 252.0,
+  "risk_free_rate": 0.0,
+  "diagnostics": {
+    "turnover": true,
+    "ic": true,
+    "ic_min_names": 20
+  },
+  "curves": {
+    "clip_lower": -0.99,
+    "shared_origin": true
+  },
+  "vol_rescale": {
+    "enabled": false,
+    "reference": null,
+    "min_periods": 20
+  }
+}

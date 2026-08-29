@@ -1,0 +1,35 @@
+{
+  "vars": {
+    "DATA": "/path/to/your/data"
+  },
+  "prices": {
+    "path": "${DATA}/prices.feather",
+    "column_map": {
+      "date": "date",
+      "id": "id",
+      "close": "close",
+      "cap": "cap"
+    },
+    "restrict_to_signal_assets": true
+  },
+  "signals": [
+    {
+      "name": "MySignal",
+      "path": "${DATA}/signals.feather",
+      "column_map": {
+        "date": "date",
+        "id": "id",
+        "alpha": "alpha"
+      },
+      "dropna": true
+    }
+  ],
+  "references": [],
+  "calendar": {
+    "first_rebalance": null,
+    "last_rebalance": null,
+    "rebalance_freq": 5,
+    "source": "signals",
+    "auto_stride": true
+  }
+}
