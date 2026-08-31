@@ -101,7 +101,7 @@ def config_dir(tmp_path: Path, prices, signals, references) -> Path:
             "calendar": {"rebalance_freq": 5, "auto_stride": False},
         },
         "engine.json": {
-            "n_buckets": 2, "min_names": 4, "holding_days": 5,
+            "n_buckets": 2, "min_names": 4, "forward_return": {"horizon": 5},
             "weights": ["ew", "vw"],
         },
         "analyzer.json": {

@@ -2,7 +2,7 @@
 from .alignment import attach_caps, build_panel, forward_returns
 from .cross_section import assign_buckets, bucket_returns, long_short_returns
 from .engine import PortfolioEngine
-from .weighting import WEIGHTERS, CapWeighter, EqualWeighter, LogCapWeighter, Weighter
+from .weighting import WEIGHTERS, CapWeighter, EqualWeighter, Weighter
 
 __all__ = [
     "PortfolioEngine",
@@ -10,7 +10,6 @@ __all__ = [
     "WEIGHTERS",
     "EqualWeighter",
     "CapWeighter",
-    "LogCapWeighter",
     "build_panel",
     "forward_returns",
     "attach_caps",

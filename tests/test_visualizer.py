@@ -7,7 +7,13 @@ import pandas as pd
 import pytest
 from matplotlib.legend import Legend
 
-from stockportfoliotoolkit.config import ChartSpec, ConfigError, StyleSpec
+from stockportfoliotoolkit.benchmark import (
+    BENCHMARK_STYLE,
+    benchmark_curve,
+    benchmark_label,
+    load_sp500_daily,
+)
+from stockportfoliotoolkit.config_schema import ChartSpec, ConfigError, StyleSpec
 from stockportfoliotoolkit.contracts import bucket_rank, sort_by_bucket
 from stockportfoliotoolkit.visualizer import Palette, build_chart
 from stockportfoliotoolkit.visualizer.charts import TICK_FONTSIZE
@@ -26,6 +32,7 @@ def _curves(buckets=("H-L",), signals=("S",)) -> pd.DataFrame:
                 "bucket": bucket,
                 "weight": weight,
                 "cum_log_ret": np.linspace(-0.05, 0.05, len(dates)),
+                "equity": np.exp(np.linspace(-0.05, 0.05, len(dates))),
             })
             for weight in ("EW", "VW")
             for signal in signals
@@ -35,7 +42,10 @@ def _curves(buckets=("H-L",), signals=("S",)) -> pd.DataFrame:
     )
 
 
+# 默认关掉内置基准，让这些用例只盯自己要断言的那几条线；
+# 基准本身另有 test_benchmark 一组用例覆盖
 def _render(weight: str = "EW", **overrides):
+    overrides.setdefault("show_benchmark", False)
     spec = ChartSpec(name="curve", **overrides)
     buckets = tuple(spec.buckets) if spec.buckets else ("H-L",)
     signals = tuple(spec.signals) if spec.signals else ("S",)
@@ -223,3 +233,140 @@ def test_summary_sorted_by_weight_then_bucket():
     assert list(zip(out["weight"], out["bucket"])) == [
         ("EW", "1"), ("EW", "H-L"), ("VW", "0"), ("VW", "H-L"),
     ]
+
+
+# ------------------------------------------------------- 内置 S&P 500 基准
+
+# 基准跟随该图的加权方案：EW 组合对 EW 指数，VW 组合对 VW 指数
+def test_benchmark_follows_the_weight_scheme():
+    assert benchmark_label("EW") == "S&P 500 EW"
+    assert benchmark_label("VW") == "S&P 500 VW"
+    assert benchmark_label("sqrtvw") == "S&P 500 VW"   # 未登记方案退回市值加权
+    axis = pd.DatetimeIndex(["2021-01-04", "2021-12-31"])
+    assert (
+        benchmark_curve(axis, "EW")["equity"].iloc[-1]
+        != benchmark_curve(axis, "VW")["equity"].iloc[-1]
+    )
+
+
+# 策略对比图默认画基准
+def test_benchmark_is_drawn_on_comparison_charts():
+    ax = _render(show_benchmark=True)
+    assert benchmark_label("EW") in [line.get_label() for line in ax.lines]
+
+
+# 净值图已从包里移除，只保留累计对数收益一种线图
+def test_equity_chart_is_no_longer_registered():
+    from stockportfoliotoolkit.visualizer import CHARTS
+
+    assert "equity" not in CHARTS
+    assert CHARTS.names() == ["cumulative_log_return"]
+
+
+# 颜色/线型硬编码：用户在 palette、reference_color 上怎么写都改不动
+def test_benchmark_style_is_hardcoded_black():
+    hostile = StyleSpec(
+        palette={"S&P 500 EW": "#ff0000", "S&P 500 VW": "#ff0000"},
+        reference_color="#ff0000",
+        linewidth=9.9,
+    )
+    figure = build_chart("cumulative_log_return").render(
+        _curves(), ChartSpec(name="curve"), hostile, "EW"
+    )
+    line = next(
+        l for l in figure.axes[0].lines if l.get_label() == benchmark_label("EW")
+    )
+    assert line.get_color() == "#000000"
+    assert line.get_linestyle() == "-"
+    assert line.get_linewidth() == BENCHMARK_STYLE["linewidth"] != hostile.linewidth
+
+
+def test_benchmark_style_mapping_is_immutable():
+    with pytest.raises(TypeError):
+        BENCHMARK_STYLE["color"] = "#ff0000"
+
+
+def test_benchmark_can_be_switched_off_but_not_restyled():
+    ax = _render(show_benchmark=False)
+    assert benchmark_label("EW") not in [line.get_label() for line in ax.lines]
+    assert not hasattr(StyleSpec(), "benchmark_color")
+
+
+# 基准是买入持有后按图表日期轴取样，与调仓节奏无关
+def test_benchmark_curve_is_buy_and_hold():
+    daily = load_sp500_daily()
+    axis = pd.DatetimeIndex(["2021-01-04", "2021-06-30", "2021-12-31"])
+    curve = benchmark_curve(axis, "VW")
+    window = daily[(daily["date"] > axis[0]) & (daily["date"] <= axis[-1])]
+    assert curve["equity"].iloc[0] == pytest.approx(1.0)
+    assert curve["equity"].iloc[-1] == pytest.approx(float((1 + window["vw_ret"]).prod()))
+    assert np.allclose(curve["cum_log_ret"], np.log(curve["equity"]))
+
+
+# 覆盖区间之外不外推：宁可断线，也不画一段假的水平线
+def test_benchmark_does_not_extrapolate():
+    curve = benchmark_curve(pd.DatetimeIndex(["2024-01-02", "2030-01-02"]), "VW")
+    assert curve["equity"].iloc[0] == pytest.approx(1.0)
+    assert np.isnan(curve["equity"].iloc[-1])
+    assert benchmark_curve(pd.DatetimeIndex(["1980-01-02", "2000-01-03"]), "VW").empty
+
+
+def test_packaged_benchmark_data_is_present_and_sane():
+    daily = load_sp500_daily()
+    assert len(daily) > 8000
+    assert daily["date"].is_monotonic_increasing
+    assert not daily["date"].duplicated().any()
+    for column in ("ew_ret", "vw_ret"):
+        assert daily[column].notna().all()
+        assert daily[column].abs().max() < 0.5
+
+
+# ----------------------------------------------------------- 多信号呈现
+
+# gradient 的色阶被分位占满，多信号只能靠线型区分，否则两路信号完全撞车
+def test_gradient_separates_signals_by_linestyle():
+    lines = [(s, b) for s in ("MOM", "REV") for b in ("0", "1", "H-L")]
+    styles = Palette(StyleSpec()).assign(lines, mode="gradient")
+    assert styles[("MOM", "0")]["color"] == styles[("REV", "0")]["color"]  # 同分位同色
+    assert styles[("MOM", "0")]["linestyle"] != styles[("REV", "0")]["linestyle"]
+    assert styles[("MOM", "H-L")]["linestyle"] != styles[("REV", "H-L")]["linestyle"]
+
+
+# 单信号 gradient 保持原样：实线 + "Decile n"
+def test_gradient_single_signal_keeps_solid_lines():
+    styles = Palette(StyleSpec()).assign(DECILES, mode="gradient")
+    assert {s["linestyle"] for s in styles.values()} == {"-"}
+
+
+def test_gradient_multi_signal_legend_carries_the_signal():
+    ax = _render(buckets=["0", "1", "H-L"], signals=["S", "T"], color_mode="gradient")
+    labels = [line.get_label() for line in ax.lines]
+    assert labels == ["S D0", "S D1", "S H-L", "T D0", "T D1", "T H-L"]
+    assert len(set(labels)) == len(labels)
+
+
+# ------------------------------------------------- 分位图 vs 策略对比图
+
+# 分位图在拆解单一策略，多一条 S&P 500 没有意义；策略对比图才需要基准
+def test_decile_charts_drop_the_benchmark_by_default():
+    decile = ChartSpec(name="decile_spread", color_mode="gradient")
+    compare = ChartSpec(name="long_short")
+    assert decile.is_decile_view and not compare.is_decile_view
+    assert not decile.wants_benchmark()
+    assert compare.wants_benchmark()
+    ax = _render(buckets=["0", "1", "H-L"], color_mode="gradient", show_benchmark=None)
+    assert not [l for l in ax.lines if "S&P 500" in str(l.get_label())]
+
+
+# 分位图逐信号出图，策略对比图把所有信号叠在一张上
+def test_split_by_signal_defaults_follow_the_chart_kind():
+    assert ChartSpec(name="d", color_mode="gradient").wants_split_by_signal()
+    assert not ChartSpec(name="ls").wants_split_by_signal()
+
+
+# 显式设置永远压过自动判断
+def test_explicit_flags_win_over_auto():
+    spec = ChartSpec(name="d", color_mode="gradient", show_benchmark=True, split_by_signal=False)
+    assert spec.wants_benchmark() and not spec.wants_split_by_signal()
+    spec = ChartSpec(name="ls", show_benchmark=False, split_by_signal=True)
+    assert not spec.wants_benchmark() and spec.wants_split_by_signal()

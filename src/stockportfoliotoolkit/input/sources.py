@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from .. import io
-from ..config import PriceSpec, ReferenceSpec, SignalSpec
+from ..config_schema import PriceSpec, ReferenceSpec, SignalSpec
 from ..contracts import (
     ALPHA,
     ASSET,
@@ -42,7 +42,14 @@ class Source(ABC):
 
 
 class AlphaSource(Source):
-    """产出 [date, asset, signal, alpha]（可选 fwd_ret）"""
+    """产出 [date, asset, signal, alpha]（可选 fwd_ret）
+
+    load() 会记录 rows_read / rows_dropped，供上游如实报告源文件的缺失率——
+    dropna 默认打开，光看产出表永远是 0，看不出源文件到底有多脏。
+    """
+
+    rows_read: int = 0
+    rows_dropped: int = 0
 
 
 class PriceSource(Source):
@@ -98,6 +105,9 @@ class FileAlphaSource(AlphaSource):
         df[ALPHA] = io.normalize_float(df[ALPHA])
         if FWD_RET in df.columns:
             df[FWD_RET] = io.normalize_float(df[FWD_RET])
+        self.rows_read = len(df)
+        usable = df[[DATE, ASSET, ALPHA]].notna().all(axis=1).sum()
+        self.rows_dropped = int(self.rows_read - usable)
         if self.spec.dropna:
             df = df.dropna(subset=[DATE, ASSET, ALPHA])
         df[SIGNAL] = self.spec.name

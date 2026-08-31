@@ -1,12 +1,13 @@
 # ② Portfolio Engine：面板 → 分桶 → 组合收益长表
 from __future__ import annotations
 
+import warnings
 from typing import Dict, List
 
 import numpy as np
 import pandas as pd
 
-from ..config import EngineConfig
+from ..config_schema import EngineConfig, HoldingPeriodWarning
 from ..contracts import (
     BUCKET,
     DATE,
@@ -49,6 +50,7 @@ class PortfolioEngine:
     # 唯一出口
     def run(self, bundle: InputBundle) -> EngineResult:
         cfg = self.cfg
+        _warn_on_overlap(bundle, cfg)
         aligned = build_panel(bundle, cfg)
         members = assign_buckets(aligned, cfg.n_buckets, cfg.min_names)
         if members.empty:
@@ -78,7 +80,10 @@ class PortfolioEngine:
         for name, grp in bundle.references.groupby(NAME, sort=True):
             frequency = str(grp[FREQUENCY].iloc[0]).lower()
             if frequency == FREQ_DAILY:
-                series = _compound(grp, bundle.calendar, cfg.holding_days, cfg.reference_lag)
+                # 基准与组合必须测同一个窗口才可比，因此这里用 horizon 而非 holding_days
+                series = _compound(
+                    grp, bundle.calendar, cfg.forward_return.horizon, cfg.reference_lag
+                )
             else:
                 series = grp[grp[DATE].isin(bundle.calendar)][[DATE, RET]]
             if series.empty:
@@ -99,6 +104,7 @@ class PortfolioEngine:
         long_bucket, short_bucket = long_short_buckets(self.cfg)
         return {
             "holding_days": int(self.cfg.holding_days),
+            "forward_horizon": int(self.cfg.forward_return.horizon),
             "n_buckets": int(self.cfg.n_buckets),
             "weights": [w.label for w in self.weighters],
             "long_short_label": spec.label if spec.enabled else None,
@@ -109,6 +115,33 @@ class PortfolioEngine:
             "signals": sorted(returns[SIGNAL].unique().tolist()),
             "rows": int(len(returns)),
         }
+
+
+# 调仓间隔与测量期不等时，逐期收益不是首尾相接的：间隔 < 测量期则窗口互相重叠，
+# 把它们当独立期累乘会重复计入同一段行情；间隔 > 测量期则期间有空仓缺口。
+# 两种情况都只告警不拦截——用户可能确实要看重叠窗口的信息系数。
+def _warn_on_overlap(bundle: InputBundle, cfg: EngineConfig) -> None:
+    calendar = bundle.calendar
+    if len(calendar) < 3:
+        return
+    trading_days = pd.DatetimeIndex(sorted(pd.unique(bundle.prices[DATE])))
+    pos = trading_days.get_indexer(pd.DatetimeIndex(calendar))
+    pos = pos[pos >= 0]
+    if len(pos) < 3:
+        return
+    stride = int(np.median(np.diff(pos)))
+    horizon = int(cfg.forward_return.horizon)
+    if stride <= 0 or stride == horizon:
+        return
+    kind = "互相重叠" if stride < horizon else "之间存在空仓缺口"
+    warnings.warn(
+        f"调仓间隔约 {stride} 个交易日，而 forward_return.horizon={horizon}："
+        f"相邻两期的持有窗口{kind}。净值曲线与 total_equity / max_drawdown "
+        f"按逐期累乘计算，在这种口径下会失真（重叠时同一段行情被重复计入）。"
+        f"通常应让 input.calendar.rebalance_freq 与 horizon 相等。",
+        HoldingPeriodWarning,
+        stacklevel=3,
+    )
 
 
 # 日频基准在 [锚点+lag, 锚点+lag+持有期) 上复利成持有期收益

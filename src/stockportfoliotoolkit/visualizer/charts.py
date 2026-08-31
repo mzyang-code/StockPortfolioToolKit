@@ -9,19 +9,25 @@ import pandas as pd
 from matplotlib.figure import Figure
 from matplotlib.ticker import ScalarFormatter
 
-from ..config import ChartSpec, StyleSpec
+from ..benchmark import BENCHMARK_STYLE, benchmark_curve, benchmark_label
+from ..config_schema import ChartSpec, StyleSpec
 from ..contracts import (
     BUCKET,
     CUM_LOG_RET,
     DATE,
-    EQUITY,
     REFERENCE_BUCKET,
     SIGNAL,
     WEIGHT,
     bucket_rank,
 )
 from ..registry import Registry
-from .style import BUCKET_LABEL, GRADIENT_MODE, SOLE_SIGNAL_LABEL, Palette
+from .style import (
+    BUCKET_LABEL,
+    GRADIENT_MODE,
+    SIGNAL_BUCKET_LABEL,
+    SOLE_SIGNAL_LABEL,
+    Palette,
+)
 
 CHARTS: Registry = Registry("chart")
 
@@ -77,6 +83,7 @@ class _LineChart(Chart):
                 label=Palette.label(signal, bucket, label_template),
                 **styles[(signal, bucket)],
             )
+        self._draw_benchmark(ax, data, spec, weight)
         if not len(data):
             ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
         if spec.show_baseline and self.baseline is not None:
@@ -108,10 +115,24 @@ class _LineChart(Chart):
         ax.yaxis.set_major_formatter(TrimmedTickFormatter())
         ax.tick_params(axis="both", labelsize=TICK_FONTSIZE)
         ax.grid(True, alpha=style.grid_alpha)
-        _place_legend(ax, len(groups), style, spec.legend_loc, spec.legend_ncol)
+        _place_legend(ax, len(ax.lines), style, spec.legend_loc, spec.legend_ncol)
         fig.autofmt_xdate()
         fig.tight_layout()
         return fig
+
+    # 包内自带的 S&P 500 基准，与组合曲线共用日期轴，并跟随该图的加权方案选 EW/VW 指数。
+    # 样式取自 BENCHMARK_STYLE 且不与 style/palette 做任何合并——颜色与线型对外不可改。
+    def _draw_benchmark(self, ax, data: pd.DataFrame, spec: ChartSpec, weight: str) -> None:
+        if not spec.wants_benchmark() or not len(data):
+            return
+        curve = benchmark_curve(data[DATE], weight)
+        if curve.empty or self.value_column not in curve.columns:
+            return
+        ax.plot(
+            curve[DATE], curve[self.value_column],
+            label=benchmark_label(weight),
+            **dict(BENCHMARK_STYLE),
+        )
 
 
 @CHARTS.register()
@@ -121,15 +142,6 @@ class CumulativeLogReturnChart(_LineChart):
     default_title = "Cumulative Returns of {weight_label} Portfolios"
     default_ylabel = "Cumulative Log Return"
     baseline = 0.0
-
-
-@CHARTS.register()
-class EquityCurveChart(_LineChart):
-    name = "equity"
-    value_column = EQUITY
-    default_title = "Cumulative Returns of {weight_label} Portfolios"
-    default_ylabel = "Equity"
-    baseline = 1.0
 
 
 # 刻度去尾零：0.00→0, 0.50→0.5, 1.00→1；科学计数等非小数格式原样放行
@@ -171,7 +183,7 @@ def _label_template(spec: ChartSpec, signals: set) -> Optional[str]:
     if spec.legend_label is not None:
         return spec.legend_label
     if str(spec.color_mode).lower() == GRADIENT_MODE:
-        return BUCKET_LABEL
+        return BUCKET_LABEL if len(signals) <= 1 else SIGNAL_BUCKET_LABEL
     return SOLE_SIGNAL_LABEL if len(signals) <= 1 else None
 
 

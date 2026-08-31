@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from ..config import EngineConfig
+from ..config_schema import EngineConfig
 from ..contracts import (
     ALIGNED_COLUMNS,
     ALPHA,
@@ -43,7 +43,8 @@ def build_panel(bundle: InputBundle, cfg: EngineConfig) -> pd.DataFrame:
         raise ContractError("信号在调仓日历上没有任何记录，检查 calendar 与信号日期是否对齐")
 
     if source == "prices":
-        fwd = forward_returns(bundle.prices, cfg.holding_days)
+        # 测量期长度取 forward_return.horizon，与 holding_days 的年化口径解耦
+        fwd = forward_returns(bundle.prices, cfg.forward_return.horizon)
         panel = signals.merge(fwd, on=[DATE, ASSET], how="left")
     elif source == "signals":
         if FWD_RET not in signals.columns:

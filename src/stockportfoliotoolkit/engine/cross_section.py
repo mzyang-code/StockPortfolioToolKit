@@ -6,7 +6,7 @@ from typing import Dict, List, Sequence, Tuple
 import numpy as np
 import pandas as pd
 
-from ..config import EngineConfig
+from ..config_schema import EngineConfig
 from ..contracts import (
     ALPHA,
     BUCKET,

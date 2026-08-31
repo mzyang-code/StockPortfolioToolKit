@@ -1,11 +1,13 @@
 {
-  "output_dir": "./outputs",
   "export_returns": true,
   "charts": [
     {
       "name": "cumulative_log_return",
       "type": "cumulative_log_return",
-      "buckets": ["H-L", "REF"],
+      "buckets": [
+        "H-L",
+        "REF"
+      ],
       "weights": null,
       "signals": null,
       "color_mode": "palette",
@@ -28,12 +30,20 @@
       "buckets": null,
       "weights": null,
       "signals": null,
-      "percent_columns": ["ann_ret", "ann_vol", "max_drawdown", "turnover"],
+      "percent_columns": [
+        "ann_ret",
+        "ann_vol",
+        "max_drawdown",
+        "turnover"
+      ],
       "decimals": 3
     }
   ],
   "style": {
-    "figsize": [12.0, 6.5],
+    "figsize": [
+      12.0,
+      6.5
+    ],
     "dpi": 160,
     "linewidth": 1.7,
     "grid_alpha": 0.25,
@@ -50,15 +60,24 @@
     "baseline_linewidth": 0.7,
     "weight_labels": {
       "EW": "Equal-Weighted",
-      "VW": "Value-Weighted",
-      "LOGVW": "Log-Cap-Weighted"
+      "VW": "Value-Weighted"
     },
     "palette": {},
-    "fallback_colors": ["#1f77b4", "#1a7f37", "#cf222e", "#bf8700", "#8250df", "#0969da"],
+    "fallback_colors": [
+      "#1f77b4",
+      "#1a7f37",
+      "#cf222e",
+      "#bf8700",
+      "#8250df",
+      "#0969da"
+    ],
     "reference_color": "#7f7f7f",
     "reference_linestyle": "--",
     "gradient_colormap": "viridis",
-    "gradient_range": [0.08, 0.92],
+    "gradient_range": [
+      0.08,
+      0.92
+    ],
     "highlight_color": "#d62728",
     "highlight_linewidth": 2.6
   }

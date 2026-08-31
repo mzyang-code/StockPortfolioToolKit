@@ -17,7 +17,7 @@ from pathlib import Path
 import pandas as pd
 
 from stockportfoliotoolkit import io
-from stockportfoliotoolkit.config import VisualizerConfig
+from stockportfoliotoolkit.config_schema import VisualizerConfig
 from stockportfoliotoolkit.contracts import BUCKET
 from stockportfoliotoolkit.pipeline import run_pipeline
 

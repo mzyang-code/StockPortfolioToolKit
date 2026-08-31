@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
+from . import io
 from .analyzer import Analyzer
-from .config import PipelineConfig
+from .config_schema import PipelineConfig
 from .contracts import AnalysisResult, EngineResult, InputBundle
 from .engine import PortfolioEngine
 from .input import InputProcessor
@@ -26,5 +27,15 @@ def run_pipeline(config_dir: Path, render: bool = True) -> PipelineResult:
     bundle = InputProcessor(cfg.input).run()
     engine = PortfolioEngine(cfg.engine).run(bundle)
     analysis = Analyzer(cfg.analyzer).run(engine)
-    outputs = Visualizer(cfg.visualizer).run(analysis) if render else []
+    visualizer = Visualizer(cfg.visualizer, data_dir=_data_dir(cfg))
+    outputs = visualizer.run(analysis) if render else []
     return PipelineResult(bundle=bundle, engine=engine, analysis=analysis, outputs=outputs)
+
+
+# visualizer.output_dir 留空时的落点锚：首路信号文件所在目录。
+# 选信号而非价格，是因为价格面板通常是多个项目共用的只读数据，不该往里写产物。
+def _data_dir(cfg: PipelineConfig) -> Optional[Path]:
+    specs = cfg.input.signals
+    if not specs:
+        return None
+    return io.resolve_path(specs[0].path, cfg.input.vars).parent

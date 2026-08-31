@@ -6,7 +6,7 @@ from typing import Dict, List
 import numpy as np
 import pandas as pd
 
-from ..config import AnalyzerConfig
+from ..config_schema import AnalyzerConfig
 from ..contracts import (
     BUCKET,
     DATE,

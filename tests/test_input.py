@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from stockportfoliotoolkit.config import InputConfig
+from stockportfoliotoolkit.config_schema import InputConfig
 from stockportfoliotoolkit.contracts import ContractError
 from stockportfoliotoolkit.input import InputProcessor
 from stockportfoliotoolkit.io import resolve_path

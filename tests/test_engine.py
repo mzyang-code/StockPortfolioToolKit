@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from stockportfoliotoolkit.config import EngineConfig
+from stockportfoliotoolkit.config_schema import EngineConfig, ForwardReturnSpec
 from stockportfoliotoolkit.contracts import ContractError
 from stockportfoliotoolkit.engine import (
     PortfolioEngine,
@@ -16,7 +16,6 @@ from stockportfoliotoolkit.engine import (
 from stockportfoliotoolkit.engine.weighting import (
     CapWeighter,
     EqualWeighter,
-    LogCapWeighter,
     build_weighter,
 )
 
@@ -37,12 +36,18 @@ def test_cap_weights_drop_missing():
     assert CapWeighter().weights(_frame([0.0, 0.0], [0.1, 0.2])) is None
 
 
-def test_logcap_weights_compress_tail():
-    w = LogCapWeighter().weights(_frame([10.0, 1000.0], [0.1, 0.2]))
-    expected = np.log([10.0, 1000.0])
-    assert np.allclose(w, expected / expected.sum())
-    # 对数加权介于等权与市值加权之间
-    assert w[1] > 0.5 and w[1] < 1000 / 1010
+# 负市值同样记 0：不裁负值会让权重出现杠杆与反向暴露
+def test_cap_weights_drop_non_positive():
+    w = CapWeighter().weights(_frame([-10.0, 20.0], [0.1, 0.2]))
+    assert np.allclose(w, [0.0, 1.0])
+    assert CapWeighter().weights(_frame([-1.0, -2.0], [0.1, 0.2])) is None
+
+
+def test_logvw_is_no_longer_registered():
+    from stockportfoliotoolkit.engine import WEIGHTERS
+
+    assert "logvw" not in WEIGHTERS
+    assert WEIGHTERS.names() == ["ew", "vw"]
 
 
 def test_forward_return_is_pure_price(prices):
@@ -75,7 +80,7 @@ def test_bucket_returns_match_hand_computation():
 
 
 def test_long_short_is_top_minus_bottom(bundle):
-    cfg = EngineConfig(n_buckets=2, min_names=4, holding_days=5, weights=["ew"])
+    cfg = EngineConfig(n_buckets=2, min_names=4, weights=["ew"], forward_return=ForwardReturnSpec(horizon=5))
     result = PortfolioEngine(cfg).run(bundle)
     wide = result.returns.pivot_table(index="date", columns="bucket", values="ret")
     assert np.allclose(wide["H-L"], wide["1"] - wide["0"], equal_nan=True)
@@ -83,7 +88,7 @@ def test_long_short_is_top_minus_bottom(bundle):
 
 # reverse 打开后多空腿整体反号
 def test_long_short_reverse(bundle):
-    cfg = EngineConfig(n_buckets=2, min_names=4, holding_days=5, weights=["ew"])
+    cfg = EngineConfig(n_buckets=2, min_names=4, weights=["ew"], forward_return=ForwardReturnSpec(horizon=5))
     cfg.long_short.reverse = True
     wide = PortfolioEngine(cfg).run(bundle).returns.pivot_table(
         index="date", columns="bucket", values="ret"
@@ -93,7 +98,7 @@ def test_long_short_reverse(bundle):
 
 # 日频基准按 [锚点+lag, +lag+持有期) 复利
 def test_reference_compounding(bundle):
-    cfg = EngineConfig(n_buckets=2, min_names=4, holding_days=5, weights=["ew"])
+    cfg = EngineConfig(n_buckets=2, min_names=4, weights=["ew"], forward_return=ForwardReturnSpec(horizon=5))
     ref = PortfolioEngine(cfg).run(bundle).returns.query("bucket == 'REF'")
     assert ref["ret"].dropna().iloc[0] == pytest.approx(1.002 ** 5 - 1)
 
@@ -105,4 +110,6 @@ def test_unknown_weighter_is_rejected():
 
 def test_empty_weights_rejected():
     with pytest.raises(ContractError):
-        PortfolioEngine(EngineConfig(weights=[]))
+        PortfolioEngine(
+            EngineConfig(weights=[], forward_return=ForwardReturnSpec(horizon=5))
+        )

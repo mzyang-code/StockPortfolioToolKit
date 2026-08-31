@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 import matplotlib as mpl
 
-from ..config import StyleSpec
+from ..config_schema import StyleSpec
 from ..contracts import REFERENCE_BUCKET, bucket_rank
 
 Line = Tuple[str, str]  # (signal, bucket)
@@ -16,7 +16,11 @@ GRADIENT_MODE = "gradient"
 
 # 默认图例文案：gradient 报分位号，单信号图只报桶名，多信号才需要信号名区分
 BUCKET_LABEL = "Decile {bucket}"
+SIGNAL_BUCKET_LABEL = "{signal} D{bucket}"  # gradient + 多信号
 SOLE_SIGNAL_LABEL = "{bucket}"
+
+# gradient 模式下色阶已被分位占满，只剩线型可用来区分信号
+GRADIENT_LINESTYLES = ("-", "--", "-.", ":")
 
 
 class Palette:
@@ -29,7 +33,8 @@ class Palette:
             return self._gradient(lines)
         return self._by_signal(lines)
 
-    # 分位桶沿色阶铺开，多空腿等特殊桶用强调色加粗压在最上层
+    # 分位桶沿色阶铺开，多空腿等特殊桶用强调色加粗压在最上层。
+    # 色阶按分位分配，因此多信号同图时改用线型区分信号，否则两路信号完全撞色。
     def _gradient(self, lines: Sequence[Line]) -> Dict[Line, Dict]:
         ranks = sorted({bucket_rank(b) for _, b in lines if bucket_rank(b) != float("inf")})
         colormap = mpl.colormaps[self.spec.gradient_colormap]
@@ -40,14 +45,20 @@ class Palette:
             )
             for i, rank in enumerate(ranks)
         }
+        signals = sorted({s for s, b in lines if b != REFERENCE_BUCKET})
+        dashes = {
+            s: GRADIENT_LINESTYLES[i % len(GRADIENT_LINESTYLES)]
+            for i, s in enumerate(signals)
+        }
         styles: Dict[Line, Dict] = {}
         for line in lines:
             signal, bucket = line
             rank = bucket_rank(bucket)
+            dash = dashes.get(signal, "-")
             if rank in shades:
                 styles[line] = {
                     "color": shades[rank],
-                    "linestyle": "-",
+                    "linestyle": dash,
                     "linewidth": self.spec.linewidth,
                     "zorder": 2,
                 }
@@ -58,7 +69,7 @@ class Palette:
                     "color": self.spec.palette.get(f"{signal} {bucket}")
                     or self.spec.palette.get(bucket)
                     or self.spec.highlight_color,
-                    "linestyle": "-",
+                    "linestyle": dash,
                     "linewidth": self.spec.highlight_linewidth,
                     "zorder": 4,
                 }
@@ -115,7 +126,8 @@ class Palette:
         if template is None:
             return f"{signal} {bucket}"
         if bucket_rank(bucket) == float("inf"):
-            return str(bucket)
+            # H-L 这类特殊桶没有分位号；模板带 {signal} 即多信号图，仍需信号名区分
+            return f"{signal} {bucket}" if "{signal}" in template else str(bucket)
         try:
             return template.format(signal=signal, bucket=bucket)
         except (KeyError, IndexError):

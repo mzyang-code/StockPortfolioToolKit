@@ -8,7 +8,7 @@ import pytest
 from stockportfoliotoolkit.analyzer import Analyzer, compute_ic, compute_turnover
 from stockportfoliotoolkit.analyzer.curves import build_curves, vol_rescale_to_reference
 from stockportfoliotoolkit.analyzer.metrics import MetricContext, build_metric
-from stockportfoliotoolkit.config import AnalyzerConfig, EngineConfig
+from stockportfoliotoolkit.config_schema import AnalyzerConfig, EngineConfig, ForwardReturnSpec
 from stockportfoliotoolkit.contracts import ContractError
 from stockportfoliotoolkit.engine import PortfolioEngine
 
@@ -89,7 +89,7 @@ def test_vol_rescale_matches_reference():
 
 def _engine(bundle):
     return PortfolioEngine(
-        EngineConfig(n_buckets=2, min_names=4, holding_days=5, weights=["ew"])
+        EngineConfig(n_buckets=2, min_names=4, weights=["ew"], forward_return=ForwardReturnSpec(horizon=5))
     ).run(bundle)
 
 

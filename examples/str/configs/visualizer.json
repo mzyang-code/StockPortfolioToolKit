@@ -2,44 +2,70 @@
   "vars": {
     "ROOT": "/home/MZYang_tmp/portfolio_tool"
   },
-  "output_dir": "${ROOT}/outputs/examples/str",
   "export_returns": true,
   "charts": [
     {
       "name": "long_short",
       "type": "cumulative_log_return",
-      "buckets": ["H-L"],
-      "weights": ["EW", "VW", "LOGVW"],
+      "buckets": [
+        "H-L"
+      ],
+      "weights": [
+        "EW",
+        "VW"
+      ],
       "show_baseline": true
     },
     {
       "name": "decile_spread",
       "type": "cumulative_log_return",
-      "buckets": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "H-L"],
-      "weights": ["EW", "VW", "LOGVW"],
+      "buckets": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "H-L"
+      ],
+      "weights": [
+        "EW",
+        "VW"
+      ],
       "color_mode": "gradient",
       "legend_ncol": 2
-    },
-    {
-      "name": "long_short_equity",
-      "type": "equity",
-      "buckets": ["H-L"],
-      "weights": ["EW", "VW", "LOGVW"],
-      "show_baseline": true
     }
   ],
   "tables": [
     {
       "name": "metrics_by_bucket",
       "type": "summary",
-      "percent_columns": ["ann_ret", "ann_vol", "max_drawdown", "turnover"],
+      "percent_columns": [
+        "ann_ret",
+        "ann_vol",
+        "max_drawdown",
+        "turnover"
+      ],
       "decimals": 4
     },
-    { "name": "ic_by_period", "type": "ic" },
-    { "name": "turnover_by_period", "type": "turnover" }
+    {
+      "name": "ic_by_period",
+      "type": "ic"
+    },
+    {
+      "name": "turnover_by_period",
+      "type": "turnover"
+    }
   ],
   "style": {
-    "figsize": [12.0, 6.5],
+    "figsize": [
+      12.0,
+      6.5
+    ],
     "dpi": 160,
     "linewidth": 1.7,
     "grid_alpha": 0.25,
@@ -48,7 +74,10 @@
       "STR": "#cf222e"
     },
     "gradient_colormap": "viridis",
-    "gradient_range": [0.08, 0.92],
+    "gradient_range": [
+      0.08,
+      0.92
+    ],
     "highlight_color": "#d62728",
     "highlight_linewidth": 2.6
   }

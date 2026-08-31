@@ -137,7 +137,7 @@ def to_legacy_wide(
     returns: pd.DataFrame,
     weight_aliases: Optional[Dict[str, str]] = None,
 ) -> pd.DataFrame:
-    aliases = weight_aliases or {"EW": "ew_ret", "VW": "vw_ret", "LOGVW": "logvw_ret"}
+    aliases = weight_aliases or {"EW": "ew_ret", "VW": "vw_ret"}
     wide = returns.pivot_table(
         index=[DATE, SIGNAL, BUCKET], columns=WEIGHT, values=RET, aggfunc="first"
     ).reset_index()

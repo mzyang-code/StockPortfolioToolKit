@@ -14,7 +14,17 @@ InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult─�
 ## Install
 
 ```bash
-pip install -e .          # add [dev] for the test suite
+pip install -e .                      # compatible ranges
+pip install -e ".[dev]"               # adds the test suite
+pip install -e ".[notebook]"          # adds what quickstart_*.ipynb needs
+```
+
+To reproduce the exact verified combination (Python 3.12.2, all 85 tests passing):
+
+```bash
+conda env create -f environment.yml
+conda activate stockportfoliotoolkit
+pip install -e .
 ```
 
 ## Quick start
@@ -36,7 +46,7 @@ Each stage can also be driven on its own:
 
 ```python
 from stockportfoliotoolkit import InputProcessor, PortfolioEngine, Analyzer, Visualizer
-from stockportfoliotoolkit.config import InputConfig, EngineConfig
+from stockportfoliotoolkit.config_schema import InputConfig, EngineConfig
 
 bundle = InputProcessor(InputConfig.from_file("configs/input.json")).run()
 engine = PortfolioEngine(EngineConfig.from_file("configs/engine.json")).run(bundle)
@@ -76,10 +86,70 @@ These rules hold everywhere and are covered by tests:
   across the cross section.
 - Cumulative equity is `(1 + r).cumprod()`. The log scale is a visualization choice
   (`log1p(r).cumsum()`).
-- Realised return is pure price: `close[t+h] / close[t] - 1`, independent of the alpha's
-  own forecast horizon.
+- Realised return is pure price: `close[t+h] / close[t] - 1` where
+  `h = forward_return.horizon`, independent of the alpha's own forecast horizon.
+- `engine.forward_return.horizon` is required — it is the single source of truth for how
+  long one period is. `engine.holding_days` inherits it when omitted; setting it to a
+  different value only warns, since that means the measurement window and the holding
+  period assumed for annualisation are no longer the same thing.
+- `input.calendar.rebalance_freq` should equal `horizon`. Otherwise consecutive holding
+  windows overlap or leave gaps, and chaining them into one equity curve distorts
+  `total_equity` / `max_drawdown` — the engine warns about this.
 - Volatility scaling is a single full-sample constant, so it never changes a curve's
   shape or its Sharpe ratio.
+
+## Built-in benchmark
+
+The package ships daily total returns for the CRSP S&P 500 Universe portfolios
+(dividends included, 1992-01-02 to 2025-12-31, 8561 trading days, in
+`src/stockportfoliotoolkit/data/sp500_daily.csv.gz`). No configuration required.
+
+- **Matched to the weighting scheme**: equal-weighted charts get the equal-weighted index,
+  value-weighted charts get the value-weighted one — only then is the comparison like-for-like.
+  Unregistered schemes fall back to value-weighted.
+- The benchmark is **buy-and-hold**, sampled onto the chart's own date axis, so it is
+  independent of the rebalance cadence and immune to overlapping holding windows.
+- Its colour (`#000000`) and line style are hardcoded in `benchmark.BENCHMARK_STYLE`;
+  neither `style.palette` nor `style.reference_color` can override them.
+- Drawn on strategy-comparison charts only. Decile charts decompose a single strategy, so
+  they omit it. Override with `charts[].show_benchmark`.
+- Dates outside the data's coverage are left as NaN rather than extrapolated.
+
+## Multi-signal charts
+
+Charts split by weighting scheme first, then by chart kind:
+
+| | Comparison charts (`palette`) | Decile charts (`gradient`) |
+|---|---|---|
+| Multiple signals | overlaid on one figure | **one figure per signal** |
+| Filename | `{name}_{weight}.png` | `{name}_{signal}_{weight}.png` |
+| S&P 500 benchmark | drawn | omitted |
+
+Resolved from `color_mode`; override with `charts[].show_benchmark` and
+`charts[].split_by_signal`. When several signals are forced onto one gradient chart, the
+colour ramp still encodes the decile, so signals are separated by **line style** instead.
+
+## Where results go
+
+Leave `visualizer.output_dir` unset and everything lands in an `outputs/` directory
+created **next to your first signal file** — beside your data, not wherever the process
+happened to be started. Charts and tables sit flat in that one directory.
+
+```
+<dir holding your signal files>/
+├── signal_mom.feather
+└── outputs/                          ← created automatically
+    ├── long_short_ew.png
+    ├── decile_spread_mom_ew.png
+    ├── metrics_by_bucket.csv
+    ├── summary_metrics.csv
+    └── curves.feather
+```
+
+Set `output_dir` explicitly to write elsewhere (`${VAR}` expansion supported). Relative
+paths resolve against the process CWD, not the config directory — so either leave it
+unset or give an absolute path. Driving `Visualizer(cfg)` directly without `run_pipeline`
+gives it no signal path to anchor on, so `output_dir` becomes mandatory there.
 
 ## Extension points
 

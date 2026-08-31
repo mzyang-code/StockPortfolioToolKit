@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stockportfoliotoolkit"
-version = "0.1.0"
+version = "0.2.0"
 description = "Config-driven cross-sectional portfolio backtesting toolkit"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -18,25 +18,32 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Office/Business :: Financial :: Investment",
 ]
+# 兼容区间。确切的已验证版本组合见 requirements.txt / environment.yml
 dependencies = [
     "numpy>=1.23",
     "pandas>=1.5",
     "pyarrow>=10.0",
-    "matplotlib>=3.6",
+    "matplotlib>=3.6",   # 需要 mpl.colormaps 注册表
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0"]
+# 跑 quickstart_*.ipynb 用
+notebook = ["nbclient>=0.10", "nbformat>=5.10", "ipykernel>=6.29"]
 
 [project.urls]
-Homepage = "https://github.com/myang682/stockportfoliotoolkit"
-Issues = "https://github.com/myang682/stockportfoliotoolkit/issues"
+Homepage = "https://github.com/mzyang-code/StockPortfolioToolKit"
+Issues = "https://github.com/mzyang-code/StockPortfolioToolKit/issues"
 
 [project.scripts]
 spt = "stockportfoliotoolkit.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# 内置 S&P 500 基准数据，必须随 sdist 与 wheel 一起分发
+[tool.setuptools.package-data]
+stockportfoliotoolkit = ["data/*.csv.gz"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

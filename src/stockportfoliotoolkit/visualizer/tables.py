@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 
-from ..config import TableSpec
+from ..config_schema import TableSpec
 from ..contracts import BUCKET, SIGNAL, WEIGHT, AnalysisResult, sort_by_bucket
 from ..registry import Registry
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from dataclasses import dataclass, field, fields, is_dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Type, TypeVar
@@ -115,8 +116,15 @@ class LongShortSpec:
     reverse: bool = False  # 默认高分位减低分位，打开则反向
 
 
+class HoldingPeriodWarning(UserWarning):
+    """holding_days 与 forward_return.horizon 不一致：可算，但口径需自证"""
+
+
 @dataclass
 class ForwardReturnSpec:
+    # 前视收益的测量期长度，单位为交易日。必填：它定义了每期实现收益跨越多长的窗口，
+    # 也是全包唯一一处「一期有多长」的事实来源。
+    horizon: Optional[int] = None
     source: str = "prices"  # prices=close 前视收益, signals=信号文件自带列
     clip_lower: Optional[float] = None
 
@@ -125,7 +133,8 @@ class ForwardReturnSpec:
 class EngineConfig:
     n_buckets: int = 10
     min_names: int = 20
-    holding_days: int = 5
+    # 留空即继承 forward_return.horizon；显式给出且不等时告警但不中断
+    holding_days: Optional[int] = None
     weights: List[str] = field(default_factory=lambda: ["ew", "vw"])
     weight_options: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     include_references: bool = True
@@ -134,6 +143,37 @@ class EngineConfig:
     forward_return: ForwardReturnSpec = _nested(
         ForwardReturnSpec, default_factory=ForwardReturnSpec
     )
+
+    # 在 __post_init__ 里做，JSON 路径与 EngineConfig(...) 直接构造都会走到
+    def __post_init__(self) -> None:
+        spec = self.forward_return
+        if spec is None or spec.horizon is None:
+            raise ConfigError(
+                "engine.forward_return.horizon 为必填项：请写明前视收益的测量期长度"
+                "（交易日）。holding_days 未单独指定时即继承该值。"
+            )
+        horizon = int(spec.horizon)
+        if horizon < 1:
+            raise ConfigError(f"engine.forward_return.horizon 必须 >= 1，得到 {spec.horizon}")
+        spec.horizon = horizon
+
+        if self.holding_days is None:
+            self.holding_days = horizon
+            return
+        self.holding_days = int(self.holding_days)
+        if self.holding_days < 1:
+            raise ConfigError(f"engine.holding_days 必须 >= 1，得到 {self.holding_days}")
+        if self.holding_days != horizon:
+            warnings.warn(
+                f"engine.holding_days={self.holding_days} 与 "
+                f"engine.forward_return.horizon={horizon} 不一致："
+                f"每期实现收益按 {horizon} 个交易日测量（基准同窗口口径），"
+                f"而年化因子按每年 252/{self.holding_days} 期折算。"
+                f"两者不等意味着组合收益的测量期与声称的持有期不是同一件事，"
+                f"年化收益/波动/夏普会相应偏移；确属有意为之可忽略本条。",
+                HoldingPeriodWarning,
+                stacklevel=3,
+            )
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "EngineConfig":
@@ -192,6 +232,9 @@ class AnalyzerConfig:
 # 图例只允许落在四个角，别处会挡住曲线
 LEGEND_CORNERS = ("upper left", "upper right", "lower left", "lower right")
 
+# 分位色阶模式的名字，与 visualizer.style.GRADIENT_MODE 同值（此处不 import 以免循环）
+GRADIENT_MODE = "gradient"
+
 
 def _check_legend_loc(value: str, ctx: str) -> None:
     if str(value).lower() not in LEGEND_CORNERS:
@@ -215,6 +258,11 @@ class ChartSpec:
     show_xlabel: bool = False
     show_ylabel: bool = False
     show_baseline: bool = False  # 基准横线（累计对数收益 0 / 净值 1）默认不画
+    # 包内自带的 S&P 500 基准曲线。留空=按图表类型自动决定（见 wants_benchmark）；
+    # 只能整条开关，不能改样式——颜色/线型硬编码在 benchmark.BENCHMARK_STYLE。
+    show_benchmark: Optional[bool] = None
+    # 多信号时是否每路信号单独出一张图。留空=自动（见 wants_split_by_signal）
+    split_by_signal: Optional[bool] = None
     # 图例：留空则跟随 style，同样限四个角
     legend_loc: Optional[str] = None
     legend_ncol: Optional[int] = None
@@ -224,6 +272,26 @@ class ChartSpec:
     def __post_init__(self) -> None:
         if self.legend_loc is not None:
             _check_legend_loc(self.legend_loc, f"visualizer.charts[{self.name}].legend_loc")
+
+    # 分位图：把一路信号拆成各分位看内部结构。本包里它等价于 color_mode="gradient"
+    # ——色阶正是按分位铺开的。策略对比图（H-L 腿）则用 palette 模式。
+    @property
+    def is_decile_view(self) -> bool:
+        return str(self.color_mode).lower() == GRADIENT_MODE
+
+    # 基准是拿来比「整条策略」的。分位图在拆解单一策略的内部结构，
+    # 多一条 S&P 500 只会挤占色彩预算，默认不画。
+    def wants_benchmark(self) -> bool:
+        if self.show_benchmark is not None:
+            return bool(self.show_benchmark)
+        return not self.is_decile_view
+
+    # 分位图每路信号单独成图：两路信号 × 10 个分位叠在一起没法读。
+    # 策略对比图恰恰相反——多路信号必须同图才谈得上比较。
+    def wants_split_by_signal(self) -> bool:
+        if self.split_by_signal is not None:
+            return bool(self.split_by_signal)
+        return self.is_decile_view
 
 
 @dataclass
@@ -263,7 +331,6 @@ class StyleSpec:
         default_factory=lambda: {
             "EW": "Equal-Weighted",
             "VW": "Value-Weighted",
-            "LOGVW": "Log-Cap-Weighted",
         }
     )
     palette: Dict[str, str] = field(default_factory=dict)
@@ -287,7 +354,9 @@ class StyleSpec:
 
 @dataclass
 class VisualizerConfig:
-    output_dir: str = "./outputs"
+    # 留空 = 落到数据文件同级的 outputs/（由 run_pipeline 定位）。
+    # 写相对路径的话按进程当前工作目录解析，跨目录启动会漂移，建议要么留空要么写绝对路径。
+    output_dir: Optional[str] = None
     charts: List[ChartSpec] = _nested(ChartSpec, many=True, default_factory=list)
     tables: List[TableSpec] = _nested(TableSpec, many=True, default_factory=list)
     style: StyleSpec = _nested(StyleSpec, default_factory=StyleSpec)

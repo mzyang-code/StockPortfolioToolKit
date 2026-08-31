@@ -54,7 +54,7 @@ $11.50。若用 `close[t+5]/close[t]-1` 算收益，这一只票会得到 **+259
 | 持有期 | 5 个交易日 | `configs/engine.json` |
 | 前视收益来源 | `signals`（用信号表自带的复权 `fwd_ret`） | `configs/engine.json` |
 | 分位数 | 10 | `configs/engine.json` |
-| 加权方案 | EW / VW / LOGVW | `configs/engine.json` |
+| 加权方案 | EW / VW | `configs/engine.json` |
 | 股票池 | 不过滤（`min_names=20` 兜底） | — |
 
 > ⚠ **持有期是耦合的**：`fwd_ret` 在信号生成时就按 5 日算死了。改 `engine.holding_days`
@@ -69,7 +69,6 @@ $11.50。若用 `close[t+5]/close[t]-1` 算收益，这一只票会得到 **+259
 | 加权 | 年化收益 | 年化波动 | Sharpe | 最大回撤 | 净值 | 换手 | IC |
 |---|---|---|---|---|---|---|---|
 | EW | 13.8% | 18.7% | 0.74 | −21.2% | 1.82 | 57.7% | 0.0023 |
-| LOGVW | 9.9% | 18.4% | 0.54 | −21.2% | 1.50 | 57.7% | 0.0023 |
 | VW | **−14.4%** | 30.0% | −0.48 | −68.7% | 0.39 | 57.7% | 0.0023 |
 
 十分位年化收益：EW 下 D0 −9.9% → D6 11.7%，Spearman 秩相关 0.273；**VW 下 Spearman
@@ -97,9 +96,8 @@ python examples/str/run_backtest.py --no-render
 
 `outputs/examples/str/`：
 
-- `long_short_{ew,vw,logvw}.png` —— 多空腿累计对数收益
-- `long_short_equity_{ew,vw,logvw}.png` —— 多空腿净值
-- `decile_spread_{ew,vw,logvw}.png` —— 十分位 + H-L 色阶图
+- `long_short_{ew,vw}.png` —— 多空腿累计对数收益
+- `decile_spread_{ew,vw}.png` —— 十分位 + H-L 色阶图
 - `metrics_by_bucket.csv` —— 各分位 × 加权方案的指标汇总
 - `ic_by_period.csv` / `turnover_by_period.csv` —— IC 与换手诊断
 - `summary_metrics.csv` / `curves.feather` / `returns.feather` —— 长表原始产物

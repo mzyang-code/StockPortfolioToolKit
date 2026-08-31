@@ -6,8 +6,8 @@ from typing import Dict, Optional
 import numpy as np
 import pandas as pd
 
-from ..config import InputConfig
-from ..contracts import ALPHA, ASSET, DATE, NAME, SIGNAL, ContractError, InputBundle
+from ..config_schema import InputConfig
+from ..contracts import ASSET, DATE, NAME, SIGNAL, ContractError, InputBundle
 from .sources import build_alpha_source, build_price_source, build_reference_source
 
 
@@ -38,10 +38,16 @@ class InputProcessor:
         )
 
     def _load_signals(self) -> pd.DataFrame:
-        frames = [build_alpha_source(s, self.cfg.vars).load() for s in self.cfg.signals]
         names = [s.name for s in self.cfg.signals]
         if len(set(names)) != len(names):
             raise ContractError(f"input.signals 存在重名: {names}")
+        frames = []
+        self._source_stats = {}
+        for spec in self.cfg.signals:
+            source = build_alpha_source(spec, self.cfg.vars)
+            frames.append(source.load())
+            # 记源文件的缺失情况：dropna 打开时产出表里看不到它们
+            self._source_stats[spec.name] = (source.rows_read, source.rows_dropped)
         merged = pd.concat(frames, ignore_index=True)
         if merged.empty:
             raise ContractError("所有 alpha 信号源均为空")
@@ -74,13 +80,17 @@ class InputProcessor:
         per_signal = {}
         for name, grp in signals.groupby(SIGNAL, sort=True):
             covered = grp[DATE].isin(calendar).sum()
+            read, dropped = getattr(self, "_source_stats", {}).get(str(name), (0, 0))
             per_signal[str(name)] = {
                 "rows": int(len(grp)),
                 "assets": int(grp[ASSET].nunique()),
                 "first": str(grp[DATE].min().date()),
                 "last": str(grp[DATE].max().date()),
                 "rows_on_calendar": int(covered),
-                "alpha_na_rate": float(grp[ALPHA].isna().mean()),
+                # 源文件里 date/id/alpha 有缺失的行占比。dropna 打开时这些行已被丢掉，
+                # 所以这个数报的是「源文件有多脏」，不是产出表里还剩多少 NaN。
+                "source_rows": int(read),
+                "source_na_rate": round(float(dropped / read), 6) if read else 0.0,
             }
         return {
             "signals": per_signal,
