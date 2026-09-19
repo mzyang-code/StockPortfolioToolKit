@@ -1,0 +1,172 @@
+# 快速开始
+
+本页从零跑通一次完整回测：准备配置、执行流水线、读取产物。
+
+## 安装
+
+=== "pip"
+
+    ```bash
+    pip install -e .                      # 兼容区间安装
+    pip install -e ".[dev]"               # 追加测试依赖
+    pip install -e ".[notebook]"          # 追加跑 quickstart_*.ipynb 的依赖
+    ```
+
+=== "conda（复现已验证版本）"
+
+    ```bash
+    conda env create -f environment.yml
+    conda activate stockportfoliotoolkit
+    pip install -e .
+    ```
+
+    对应 Python 3.12.2 与全部 85 个测试通过的那一组确切版本。
+
+安装后会注册命令行入口 `spt`。
+
+## 准备数据
+
+包内没有任何硬编码路径。配置指向文件、声明 `column_map` 即可，内置支持 `feather`、`parquet`、`csv` 三种格式。
+
+| 输入 | 映射后必需列 | 说明 |
+|---|---|---|
+| `prices` | `date`、`id` | 每个 (date, id) 一行；`close` 仅 `forward_return.source="prices"` 时需要，`cap` 仅市值加权时需要 |
+| `signals[]` | `date`、`id`、`alpha` | 每个信号一项，`fwd_ret` 可选 |
+| `references[]` | `date`、`ret` | 外部基准序列，`frequency` 取 `daily` 或 `period` |
+
+只带前视收益、没有价格序列的预测结果文件是一等输入：`prices.column_map` 中不写 `close`，把 `engine.forward_return.source` 设为 `"signals"`，再映射文件自带的 `fwd_ret` 列即可。此时价格面板只承担两件事——关联市值、定义交易日历。
+
+## 四份配置
+
+配置目录内固定四个文件名，缺任一即报错：
+
+```
+configs/
+├── input.json          数据来源、列映射、调仓日历
+├── engine.json         分桶、加权、前视收益口径
+├── analyzer.json       指标、诊断、曲线
+└── visualizer.json     图表、数据表、样式
+```
+
+一份最小可用的 `input.json`：
+
+```json
+{
+  "vars": { "DATA": "/path/to/your/data" },
+  "prices": {
+    "path": "${DATA}/prices.feather",
+    "column_map": { "date": "date", "id": "id", "close": "close", "cap": "cap" }
+  },
+  "signals": [
+    {
+      "name": "MySignal",
+      "path": "${DATA}/signals.feather",
+      "column_map": { "date": "date", "id": "id", "alpha": "alpha" }
+    }
+  ],
+  "calendar": { "rebalance_freq": 5, "source": "signals" }
+}
+```
+
+配套的 `engine.json`，其中 `forward_return.horizon` 为必填项：
+
+```json
+{
+  "n_buckets": 10,
+  "min_names": 20,
+  "weights": ["ew", "vw"],
+  "long_short": { "enabled": true, "label": "H-L" },
+  "forward_return": { "horizon": 5, "source": "prices" }
+}
+```
+
+!!! tip "`rebalance_freq` 与 `horizon` 保持相等"
+
+    上例两者均为 5 个交易日，相邻两期的持有窗口首尾相接。不等时引擎会告警，详见 [engine.json 参考](../reference/config-engine.md)。
+
+`vars` 中定义的变量以 `${VAR}` 形式在路径里展开，便于在不同机器间切换数据根目录。
+
+未知配置项会被直接拒绝并列出可用项，拼写错误不会被静默吞掉：
+
+```
+ConfigError: engine: 未知配置项 ['n_bucket']；可用项为 ['forward_return', 'holding_days', ...]
+```
+
+## 运行
+
+=== "命令行"
+
+    ```bash
+    spt run --config-dir configs/
+    spt run --config-dir configs/ --no-render     # 只算不出图
+    spt run --config-dir configs/ --quiet         # 不打印摘要，仅列出落盘文件
+    ```
+
+=== "Python"
+
+    ```python
+    from stockportfoliotoolkit import run_pipeline
+
+    result = run_pipeline("configs/")
+    ```
+
+各阶段也可以单独驱动，中间产物在模块间以固定契约传递：
+
+```python
+from stockportfoliotoolkit import InputProcessor, PortfolioEngine, Analyzer, Visualizer
+from stockportfoliotoolkit.config_schema import InputConfig, EngineConfig
+
+bundle = InputProcessor(InputConfig.from_file("configs/input.json")).run()
+engine = PortfolioEngine(EngineConfig.from_file("configs/engine.json")).run(bundle)
+```
+
+## 读取结果
+
+`PipelineResult` 保留了全部中间产物：
+
+| 字段 | 类型 | 内容 |
+|---|---|---|
+| `result.bundle` | `InputBundle` | 标准化后的信号、价格、调仓日历 |
+| `result.engine` | `EngineResult` | 逐期组合收益、成分明细、对齐面板 |
+| `result.analysis` | `AnalysisResult` | 指标汇总、净值曲线、换手与 IC |
+| `result.outputs` | `list[Path]` | 已落盘的文件清单 |
+
+组合收益采用长表，因此任意数量的加权方案都能装进同一张表：
+
+| date | signal_model | bucket | weight | ret | count |
+|---|---|---|---|---|---|
+
+`bucket` 取 `"0".."n-1"`，多空腿为 `"H-L"`，外部基准为 `"REF"`。
+
+```python
+summary = result.analysis.summary
+summary[summary["bucket"] == "H-L"]      # 只看多空腿
+```
+
+## 产物落盘位置
+
+`visualizer.output_dir` 留空时，产物落到**首路信号文件同级**的 `outputs/`，与数据放在一起，不随进程当前工作目录漂移：
+
+```
+<信号文件所在目录>/
+├── signal_mom.feather
+└── outputs/                          ← 自动创建
+    ├── long_short_ew.png             # 每个 charts[] × 每个加权方案一张
+    ├── long_short_vw.png
+    ├── decile_spread_mom_ew.png      # 分位图逐信号拆分
+    ├── metrics_by_bucket.csv         # 每个 tables[] 一份
+    ├── summary_metrics.csv           # export_returns=true 时的完整指标长表
+    └── curves.feather
+```
+
+图与表平铺在同一层，不分子目录。
+
+!!! warning "相对路径按进程当前工作目录解析"
+
+    显式给出 `output_dir` 时，相对路径不按配置文件所在目录解析。跨目录启动会导致产物漂移，因此建议要么留空使用默认锚点，要么写绝对路径。
+
+    单独使用 `Visualizer(cfg)` 而不走 `run_pipeline` 时没有信号路径可作锚点，此时必须显式给出 `output_dir`，否则报错——不会悄悄写入当前目录。
+
+## 下一步
+
+- [engine.json 配置参考](../reference/config-engine.md)：分桶、加权与前视收益的逐字段说明

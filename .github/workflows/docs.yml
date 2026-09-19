@@ -1,0 +1,71 @@
+name: Deploy docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'pyproject.toml'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+# GITHUB_TOKEN 的最小权限组合：读仓库、写 Pages、签发部署用的 OIDC 令牌
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时刻只保留一次部署；排队中的任务不取消，避免中途丢版本
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      # 依赖取自 pyproject 的 docs extra，与本地构建保持单一真源。
+      # 其中 jieba 决定中文搜索索引是否分词，缺失时不报错但检索会退化。
+      - name: Install dependencies
+        run: pip install -e ".[docs]"
+
+      # --strict 让失效的内部链接与配置告警直接失败，不把坏页面发上线
+      - name: Build
+        run: mkdocs build --strict
+
+      - name: Verify Chinese search index
+        run: |
+          python - <<'EOF'
+          import json, sys
+          with open('site/search/search_index.json', encoding='utf-8') as fh:
+              index = json.load(fh)
+          langs = index['config']['lang']
+          if 'zh' not in langs:
+              sys.exit(f"搜索索引未启用中文: lang={langs}")
+          # jieba 分词以零宽空格 U+200B 分隔，缺失即说明分词没跑起来
+          if not any('​' in doc['text'] for doc in index['docs']):
+              sys.exit("搜索索引中未见分词标记，检查 jieba 是否安装")
+          print(f"搜索索引正常: lang={langs}, 文档数={len(index['docs'])}")
+          EOF
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

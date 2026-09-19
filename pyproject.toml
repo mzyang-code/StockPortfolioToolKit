@@ -30,6 +30,9 @@ dependencies = [
 dev = ["pytest>=7.0"]
 # 跑 quickstart_*.ipynb 用
 notebook = ["nbclient>=0.10", "nbformat>=5.10", "ipykernel>=6.29"]
+# 构建 docs/ 下的文档站用。jieba 非可选：缺失时中文正文不分词，
+# 搜索索引退化为整句匹配，站内检索基本失效
+docs = ["mkdocs>=1.6", "mkdocs-material>=9.5", "jieba>=0.42"]
 
 [project.urls]
 Homepage = "https://github.com/mzyang-code/StockPortfolioToolKit"

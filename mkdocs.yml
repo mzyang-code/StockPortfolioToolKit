@@ -1,0 +1,104 @@
+site_name: StockPortfolioToolKit
+site_description: 配置驱动的截面投资组合回测工具包
+site_author: myang682
+site_url: https://mzyang-code.github.io/StockPortfolioToolKit/
+
+repo_url: https://github.com/mzyang-code/StockPortfolioToolKit
+repo_name: mzyang-code/StockPortfolioToolKit
+edit_uri: edit/main/docs/
+
+copyright: MIT License
+
+docs_dir: docs
+
+theme:
+  name: material
+  language: zh
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: 切换到暗色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: 切换到亮色模式
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  # theme.language 只管界面文案，不影响检索。中文检索须在此显式声明 lang，
+  # 否则索引按英文 stemmer 建立，对中文命中率极低。
+  - search:
+      lang:
+        - zh
+        - en
+      separator: '[\s​\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  # 中文标题的默认 slug 为空，会退化成 #_1 / #_2 这类序号锚点：
+  # 插入新标题会让已有深链静默指向别处。改用 Unicode slug 保留中文，锚点随标题稳定。
+  - toc:
+      permalink: true
+      toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
+  - pymdownx.details
+  # mermaid 需要 custom_fences，否则 ```mermaid 只会渲染成普通代码块
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+nav:
+  - 首页: index.md
+  - 指南:
+      - 快速开始: guide/quickstart.md
+      - 核心概念: guide/concepts.md
+      - 准备输入数据: guide/prepare-data.md
+      - 多信号: guide/multi-signal.md
+      - 产物与落盘: guide/outputs.md
+      - 数学口径: guide/math.md
+  - 配置参考:
+      - input.json: reference/config-input.md
+      - engine.json: reference/config-engine.md

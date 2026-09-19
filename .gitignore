@@ -12,6 +12,7 @@ venv/
 outputs/
 logs/
 cache/
+site/
 *.feather
 *.parquet
 !tests/**/*.feather
