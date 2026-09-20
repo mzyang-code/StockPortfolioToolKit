@@ -42,6 +42,25 @@ def test_auto_stride_skips_redundant_subsampling(config_dir):
     assert dense.meta["calendar"]["native_stride"] == 1
 
 
+# close 只在价格口径下参与计算，未映射时补 NaN 占位，
+# 价格面板照常提供市值关联与交易日历
+def test_prices_without_close_mapping(config_dir):
+    cfg = _cfg(config_dir)
+    cfg.prices.column_map.pop("close")
+    bundle = InputProcessor(cfg).run()
+    assert list(bundle.prices.columns) == ["date", "id", "close", "cap"]
+    assert bundle.prices["close"].isna().all()
+    assert bundle.prices["cap"].notna().all()
+
+
+# 声明了 close 却对不上源列仍要报错，拼写错误不能被当成「未提供」静默吞掉
+def test_misspelled_close_is_reported(config_dir):
+    cfg = _cfg(config_dir)
+    cfg.prices.column_map["close"] = "not_there"
+    with pytest.raises(ContractError, match="not_there"):
+        InputProcessor(cfg).run()
+
+
 def test_missing_source_column_is_reported(config_dir):
     cfg = _cfg(config_dir)
     cfg.signals[0].column_map["alpha"] = "not_there"

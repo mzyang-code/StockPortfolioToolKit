@@ -1,13 +1,17 @@
 # Engine：分桶、三种加权、多空、前视收益、基准复利
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from stockportfoliotoolkit.config_schema import EngineConfig, ForwardReturnSpec
-from stockportfoliotoolkit.contracts import ContractError
+from stockportfoliotoolkit.contracts import ContractError, InputBundle
 from stockportfoliotoolkit.engine import (
+    DegeneratePriceWarning,
+    IgnoredForwardReturnWarning,
     PortfolioEngine,
     assign_buckets,
     bucket_returns,
@@ -101,6 +105,64 @@ def test_reference_compounding(bundle):
     cfg = EngineConfig(n_buckets=2, min_names=4, weights=["ew"], forward_return=ForwardReturnSpec(horizon=5))
     ref = PortfolioEngine(cfg).run(bundle).returns.query("bucket == 'REF'")
     assert ref["ret"].dropna().iloc[0] == pytest.approx(1.002 ** 5 - 1)
+
+
+# ---------- close 缺失、退化与口径冲突 ----------
+
+def _replace(bundle, **changes) -> InputBundle:
+    kept = {
+        "signals": bundle.signals,
+        "prices": bundle.prices,
+        "calendar": bundle.calendar,
+        "references": bundle.references,
+        "meta": bundle.meta,
+    }
+    return InputBundle(**{**kept, **changes})
+
+
+def _cfg(source: str) -> EngineConfig:
+    return EngineConfig(
+        n_buckets=2, min_names=4, weights=["ew"],
+        forward_return=ForwardReturnSpec(horizon=5, source=source),
+    )
+
+
+# close 整列为空要在价格口径入口截断，而不是退化成「没有任何调仓日通过分桶」
+def test_price_source_requires_close(bundle):
+    blank = bundle.prices.assign(close=np.nan)
+    with pytest.raises(ContractError, match="close"):
+        PortfolioEngine(_cfg("prices")).run(_replace(bundle, prices=blank))
+
+
+# 占位常数 close 推出的前视收益恒为 0，必须显式告警而非静默产出零收益
+def test_constant_close_warns(bundle):
+    flat = bundle.prices.assign(close=1.0)
+    with pytest.warns(DegeneratePriceWarning, match="占位"):
+        result = PortfolioEngine(_cfg("prices")).run(_replace(bundle, prices=flat))
+    portfolio = result.returns[result.returns["bucket"] != "REF"]
+    assert (portfolio["ret"].abs() < 1e-12).all()
+
+
+# 信号自带 fwd_ret 与价格口径同名，merge 前须先丢弃，否则整列裂成 _x/_y 后消失
+def test_signal_fwd_ret_ignored_under_price_source(bundle):
+    baseline = PortfolioEngine(_cfg("prices")).run(bundle).returns
+    carried = bundle.signals.assign(fwd_ret=-99.0)
+    with pytest.warns(IgnoredForwardReturnWarning):
+        got = PortfolioEngine(_cfg("prices")).run(_replace(bundle, signals=carried)).returns
+    assert np.allclose(got["ret"], baseline["ret"], equal_nan=True)
+
+
+# source="signals" 下 close 无人使用，缺列也应照常跑完，且不触发任何价格相关告警
+def test_signal_source_tolerates_missing_close(bundle):
+    blank = bundle.prices.assign(close=np.nan)
+    carried = bundle.signals.assign(fwd_ret=0.01)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=DegeneratePriceWarning)
+        warnings.filterwarnings("error", category=IgnoredForwardReturnWarning)
+        result = PortfolioEngine(_cfg("signals")).run(
+            _replace(bundle, prices=blank, signals=carried)
+        )
+    assert result.returns["ret"].notna().any()
 
 
 def test_unknown_weighter_is_rejected():
