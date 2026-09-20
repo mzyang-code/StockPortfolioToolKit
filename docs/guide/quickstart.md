@@ -1,6 +1,9 @@
 # 快速开始
 
-本页从零跑通一次完整回测：准备配置、执行流水线、读取产物。
+本页从零跑通一次完整回测：准备数据、执行、读取产物。
+
+工具包有两条对等的入口——交互式分析用 Python API，批量执行与复现归档用配置目录。两者共用同一套
+校验与计算，结果逐值一致。
 
 ## 安装
 
@@ -34,9 +37,55 @@
 | `signals[]` | `date`、`id`、`alpha` | 每个信号一项，`fwd_ret` 可选 |
 | `references[]` | `date`、`ret` | 外部基准序列，`frequency` 取 `daily` 或 `period` |
 
-只带前视收益、没有价格序列的预测结果文件是一等输入：`prices.column_map` 中不写 `close`，把 `engine.forward_return.source` 设为 `"signals"`，再映射文件自带的 `fwd_ret` 列即可。此时价格面板只承担两件事——关联市值、定义交易日历。
+只带前视收益、没有价格序列的预测结果文件是一等输入：`prices.column_map` 中不写 `close`，把 `engine.forward_return.source` 设为 `"signals"`，再映射文件自带的 `fwd_ret` 列即可。此时价格面板只承担两件事——关联市值、定义交易日历。走 Python API 时这一步是自动的：信号自带 `fwd_ret` 即取该列，无需声明。
+
+## 跑第一次回测
+
+因子与价格表直接传 DataFrame，无需先落盘：
+
+```python
+import stockportfoliotoolkit as spt
+
+bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
+
+bt.summary(bucket="H-L")       # 多空腿指标
+bt.plot("long_short")          # 净值图，返回 matplotlib Figure
+bt.save("outputs/")            # 图与表落盘
+```
+
+`horizon` 是每期实现收益的测量期长度（交易日），必填——它定义了「一期有多长」，全包只此一处事实来源。
+
+三处默认值按数据推导，省去了手工保持一致的负担：
+
+- `rebalance_freq` 缺省等于 `horizon`，相邻持有窗口首尾相接
+- 价格表含 `cap` 列时自动加上市值加权，没有则只做等权
+- 信号自带 `fwd_ret` 时用该列，否则由 `close` 推算
+- 列名已是 `date` / `id` / `alpha` 时无需声明映射
+
+多路 alpha 用映射给出，键即信号名：
+
+```python
+bt = spt.backtest(signals={"MOM": mom_df, "REV": rev_df}, prices=price_df, horizon=5)
+bt.plot("deciles", signal="MOM")
+```
+
+文件路径与内存表等价：
+
+```python
+bt = spt.backtest(signals="alpha.feather", prices="prices.feather", horizon=5)
+```
+
+逐参数说明见 [Python API 参考](../reference/api.md)。
 
 ## 四份配置
+
+配置目录适合服务器批量执行，以及随论文归档——一份能进版本库、能 diff 的配置比散落在 notebook 里的调用更便于复核。
+
+notebook 中定稿的参数可反向导出，不必手写：
+
+```python
+bt.to_config("paper/configs/", data_dir="paper/data/")
+```
 
 配置目录内固定四个文件名，缺任一即报错：
 
@@ -169,4 +218,5 @@ summary[summary["bucket"] == "H-L"]      # 只看多空腿
 
 ## 下一步
 
+- [Python API 参考](../reference/api.md)：`backtest()` 逐参数说明与结果对象
 - [engine.json 配置参考](../reference/config-engine.md)：分桶、加权与前视收益的逐字段说明

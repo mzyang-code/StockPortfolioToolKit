@@ -1,14 +1,21 @@
 # 跨截面组合回测工具包：Input → Engine → Analyzer → Visualizer 单向数据流
 from .analyzer import Analyzer
+from .api import BacktestResult, backtest
 from .config_schema import AnalyzerConfig, EngineConfig, InputConfig, PipelineConfig, VisualizerConfig
 from .contracts import AnalysisResult, EngineResult, InputBundle, to_legacy_wide
 from .engine import PortfolioEngine
 from .input import InputProcessor
 from .pipeline import PipelineResult, run_pipeline
+from .settings import settings
 from .visualizer import Visualizer
 
 __version__ = "0.2.0"
 __all__ = [
+    # 一行跑通的门面入口
+    "backtest",
+    "BacktestResult",
+    "settings",
+
     # 核心类
     "InputProcessor",
     "PortfolioEngine",

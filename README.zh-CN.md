@@ -1,14 +1,13 @@
 # stockportfoliotoolkit
 
-配置驱动的截面投资组合回测工具包。输入端只需提供 alpha，分桶、加权、指标计算与出图由工具包完成。
+截面投资组合回测工具包。输入端只需提供 alpha，分桶、加权、指标计算与出图由工具包完成。
 
 **📖 [完整文档](https://mzyang-code.github.io/StockPortfolioToolKit/)** ｜ [English](README.md)
 
-四个模块，单向数据流。每个模块拥有独立的 JSON 配置和唯一的公开入口，任何一环都可以单独替换而不影响其他模块。
+四个模块，单向数据流。每个模块拥有唯一的公开入口，任何一环都可以单独替换而不影响其他模块。
 
 ```
 InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult──▶ Analyzer ──AnalysisResult──▶ Visualizer ──▶ PNG / CSV
-   input.json                     engine.json                     analyzer.json                visualizer.json
 ```
 
 本包只消费 alpha，不生成任何信号。MOM / STR / WSTR 这类价格因子属于普通输入，与任何外部 alpha 同等对待。
@@ -32,27 +31,47 @@ pip install -e .
 
 ## 快速开始
 
+因子与价格表直接传 DataFrame，无需先落盘：
+
+```python
+import stockportfoliotoolkit as spt
+
+bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
+
+bt.summary()                   # 按 (signal_model, bucket, weight) 的指标
+bt.plot("long_short")          # 多空腿净值图，返回 matplotlib Figure
+bt.plot("deciles")             # 分位色阶图
+bt.save("outputs/")            # 图 PNG 与指标 CSV 落盘
+
+bt.returns                     # 逐期组合收益长表
+bt.curves                      # 净值与累计对数收益曲线
+```
+
+`horizon` 是每期实现收益的测量期长度（交易日），必填。列名与契约一致（`date` / `id` / `alpha`）时无需声明映射；调仓间隔缺省等于 `horizon`；价格表含 `cap` 列时自动加上市值加权。
+
+文件路径与内存表等价，两者可混用：
+
+```python
+bt = spt.backtest(signals="alpha.feather", prices="prices.feather", horizon=5)
+bt = spt.backtest(signals={"MOM": mom_df, "REV": rev_df}, prices=price_df, horizon=5)
+```
+
+### 批量执行与复现归档
+
+JSON 配置目录仍是一等入口，适合服务器批量执行与随论文归档：
+
 ```bash
 spt run --config-dir configs/
 ```
 
 ```python
-from stockportfoliotoolkit import run_pipeline
-
-result = run_pipeline("configs/")
-result.analysis.summary        # 按 (signal_model, bucket, weight) 的指标
-result.engine.returns          # 逐期组合收益长表
-result.outputs                 # 已落盘的文件清单
+result = spt.run_pipeline("configs/")
 ```
 
-各阶段也可以单独驱动：
+两条路径共用同一套校验与计算，结果逐值一致。notebook 中定稿的参数可反向导出成配置目录：
 
 ```python
-from stockportfoliotoolkit import InputProcessor, PortfolioEngine, Analyzer, Visualizer
-from stockportfoliotoolkit.config_schema import InputConfig, EngineConfig
-
-bundle = InputProcessor(InputConfig.from_file("configs/input.json")).run()
-engine = PortfolioEngine(EngineConfig.from_file("configs/engine.json")).run(bundle)
+bt.to_config("paper/configs/", data_dir="paper/data/")
 ```
 
 ## 文档
@@ -65,6 +84,7 @@ engine = PortfolioEngine(EngineConfig.from_file("configs/engine.json")).run(bund
 | [多信号](https://mzyang-code.github.io/StockPortfolioToolKit/guide/multi-signal/) | 一次跑多路 alpha，以及图表如何拆分 |
 | [产物与落盘](https://mzyang-code.github.io/StockPortfolioToolKit/guide/outputs/) | 文件清单、命名规则与长表结构 |
 | [数学口径](https://mzyang-code.github.io/StockPortfolioToolKit/guide/math/) | 每个指标的确切算法与失真条件 |
+| [Python API](https://mzyang-code.github.io/StockPortfolioToolKit/reference/api/) | `backtest()` 逐参数说明与结果对象 |
 | [配置参考](https://mzyang-code.github.io/StockPortfolioToolKit/reference/config-input/) | 逐字段说明类型、默认值与约束 |
 
 ## 基准

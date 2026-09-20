@@ -34,8 +34,10 @@ def run_pipeline(config_dir: Path, render: bool = True) -> PipelineResult:
 
 # visualizer.output_dir 留空时的落点锚：首路信号文件所在目录。
 # 选信号而非价格，是因为价格面板通常是多个项目共用的只读数据，不该往里写产物。
+# 内存 DataFrame 输入时没有路径可作锚，返回 None 交由 Visualizer._output_dir 报错，
+# 不猜测落点、也不悄悄写进当前工作目录。
 def _data_dir(cfg: PipelineConfig) -> Optional[Path]:
     specs = cfg.input.signals
-    if not specs:
+    if not specs or not specs[0].path:
         return None
     return io.resolve_path(specs[0].path, cfg.input.vars).parent

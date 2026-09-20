@@ -1,16 +1,15 @@
 # stockportfoliotoolkit
 
-Config-driven cross-sectional portfolio backtesting. The toolkit consumes alpha and handles
-bucketing, weighting, metrics and charts.
+Cross-sectional portfolio backtesting. The toolkit consumes alpha and handles bucketing,
+weighting, metrics and charts.
 
 **📖 [Documentation](https://mzyang-code.github.io/StockPortfolioToolKit/)** (Chinese) ｜ [简体中文 README](README.zh-CN.md)
 
-Four modules, one direction of data flow. Each module owns a JSON config and a single
-public entry point, so any stage can be swapped without touching the others.
+Four modules, one direction of data flow. Each module owns a single public entry point,
+so any stage can be swapped without touching the others.
 
 ```
 InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult──▶ Analyzer ──AnalysisResult──▶ Visualizer ──▶ PNG / CSV
-   input.json                     engine.json                     analyzer.json                visualizer.json
 ```
 
 The toolkit consumes alpha only — it never generates signals. Price-based factors such as
@@ -35,27 +34,52 @@ pip install -e .
 
 ## Quick start
 
+Factor and price tables go in as DataFrames — no need to write them to disk first:
+
+```python
+import stockportfoliotoolkit as spt
+
+bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
+
+bt.summary()                   # metrics per (signal_model, bucket, weight)
+bt.plot("long_short")          # long-short equity curve, returns a matplotlib Figure
+bt.plot("deciles")             # per-quantile gradient chart
+bt.save("outputs/")            # PNG charts and CSV metrics to disk
+
+bt.returns                     # per-period portfolio returns, long format
+bt.curves                      # equity and cumulative log-return curves
+```
+
+`horizon` is the measurement window of each period's realised return, in trading days,
+and is required. Column mapping is inferred when the source names already match the
+contract (`date` / `id` / `alpha`); the rebalance interval defaults to `horizon`; and
+value weighting is added automatically when the price table carries a `cap` column.
+
+File paths work interchangeably with in-memory tables:
+
+```python
+bt = spt.backtest(signals="alpha.feather", prices="prices.feather", horizon=5)
+bt = spt.backtest(signals={"MOM": mom_df, "REV": rev_df}, prices=price_df, horizon=5)
+```
+
+### Batch runs and reproducible archives
+
+The JSON config directory remains a first-class entry point, suited to batch execution
+on a server and to shipping alongside a paper:
+
 ```bash
 spt run --config-dir configs/
 ```
 
 ```python
-from stockportfoliotoolkit import run_pipeline
-
-result = run_pipeline("configs/")
-result.analysis.summary        # metrics per (signal_model, bucket, weight)
-result.engine.returns          # per-period portfolio returns, long format
-result.outputs                 # files written to disk
+result = spt.run_pipeline("configs/")
 ```
 
-Each stage can also be driven on its own:
+Both paths share the same validation and computation and agree value for value.
+Parameters settled in a notebook export back out into a config directory:
 
 ```python
-from stockportfoliotoolkit import InputProcessor, PortfolioEngine, Analyzer, Visualizer
-from stockportfoliotoolkit.config_schema import InputConfig, EngineConfig
-
-bundle = InputProcessor(InputConfig.from_file("configs/input.json")).run()
-engine = PortfolioEngine(EngineConfig.from_file("configs/engine.json")).run(bundle)
+bt.to_config("paper/configs/", data_dir="paper/data/")
 ```
 
 ## Documentation
@@ -70,6 +94,7 @@ The full documentation is written in Chinese. Direct links:
 | [Multiple signals](https://mzyang-code.github.io/StockPortfolioToolKit/guide/multi-signal/) | Running several alphas at once, and how charts split |
 | [Outputs](https://mzyang-code.github.io/StockPortfolioToolKit/guide/outputs/) | File listing, naming rules, long-table structure |
 | [Math contract](https://mzyang-code.github.io/StockPortfolioToolKit/guide/math/) | The exact formula behind every metric |
+| [Python API](https://mzyang-code.github.io/StockPortfolioToolKit/reference/api/) | `backtest()` parameters and the result object |
 | [Config reference](https://mzyang-code.github.io/StockPortfolioToolKit/reference/config-input/) | Per-field types, defaults and constraints |
 
 ## Benchmarks

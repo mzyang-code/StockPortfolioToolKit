@@ -7,6 +7,8 @@ from .sources import (
     AlphaSource,
     PriceSource,
     ReferenceSource,
+    available_columns,
+    provides_column,
 )
 
 __all__ = [
@@ -17,4 +19,6 @@ __all__ = [
     "ALPHA_SOURCES",
     "PRICE_SOURCES",
     "REFERENCE_SOURCES",
+    "available_columns",
+    "provides_column",
 ]

@@ -40,6 +40,14 @@ class Visualizer:
         self.cfg = cfg
         self.data_dir = Path(data_dir) if data_dir is not None else None
 
+    # 配置未声明样式时取全局默认。在此处取而非构造时取，使 settings 的改动
+    # 对已建好的 config 同样生效，无需重新构造。
+    @property
+    def style(self):
+        from ..settings import settings
+
+        return self.cfg.style if self.cfg.style is not None else settings.style
+
     # 唯一出口：返回落盘文件清单
     def run(self, analysis: AnalysisResult) -> List[Path]:
         out_dir = self._output_dir()
@@ -69,14 +77,15 @@ class Visualizer:
             if not len(weights):
                 raise ContractError(f"图表 '{spec.name}': 分析结果里没有任何加权方案")
             chart = build_chart(spec.type)
+            style = self.style
             # 分位图逐信号出图，策略对比图把所有信号叠在一张上
             slices = self._signal_slices(analysis, spec)
             for weight in weights:
                 for suffix, curves in slices:
-                    figure = chart.render(curves, spec, self.cfg.style, weight, analysis.meta)
+                    figure = chart.render(curves, spec, style, weight, analysis.meta)
                     name = f"{spec.name}{suffix}_{str(weight).lower()}.png"
                     path = out_dir / name
-                    figure.savefig(path, dpi=self.cfg.style.dpi, bbox_inches="tight")
+                    figure.savefig(path, dpi=style.dpi, bbox_inches="tight")
                     written.append(path)
         return written
 

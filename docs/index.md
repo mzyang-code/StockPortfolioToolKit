@@ -25,24 +25,24 @@ InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult─�
 
 </div>
 
-四个模块构成单向数据流。每个模块拥有独立的 JSON 配置和唯一的公开入口，任何一环都可以单独替换而不影响其余模块。
+四个模块构成单向数据流。每个模块拥有唯一的公开入口，任何一环都可以单独替换而不影响其余模块。
 
 ## 三行跑通
 
-```bash
-pip install -e .
-spt run --config-dir configs/
-```
-
-或在 Python 中驱动：
+因子与价格表直接传 DataFrame，无需先落盘：
 
 ```python
-from stockportfoliotoolkit import run_pipeline
+import stockportfoliotoolkit as spt
 
-result = run_pipeline("configs/")
-result.analysis.summary        # 按 (signal_model, bucket, weight) 的指标
-result.engine.returns          # 逐期组合收益长表
-result.outputs                 # 已落盘的文件清单
+bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
+bt.summary(bucket="H-L")       # 多空腿指标
+bt.plot("long_short")          # 净值图，返回 matplotlib Figure
+```
+
+批量执行与复现归档走配置目录，两条路径结果逐值一致：
+
+```bash
+spt run --config-dir configs/
 ```
 
 ## 从这里开始
@@ -73,13 +73,13 @@ result.outputs                 # 已落盘的文件清单
 
     [:octicons-arrow-right-24: 核对公式](guide/math.md)
 
--   :material-tune-variant: **配置参考**
+-   :material-language-python: **Python API**
 
     ---
 
-    逐字段说明类型、默认值与约束
+    `backtest()` 逐参数说明与结果对象
 
-    [:octicons-arrow-right-24: input.json](reference/config-input.md)
+    [:octicons-arrow-right-24: API 参考](reference/api.md)
 
 </div>
 

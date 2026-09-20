@@ -99,6 +99,7 @@ nav:
       - 多信号: guide/multi-signal.md
       - 产物与落盘: guide/outputs.md
       - 数学口径: guide/math.md
-  - 配置参考:
+  - 参考:
+      - Python API: reference/api.md
       - input.json: reference/config-input.md
       - engine.json: reference/config-engine.md

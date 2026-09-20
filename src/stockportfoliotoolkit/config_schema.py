@@ -7,6 +7,8 @@ from dataclasses import dataclass, field, fields, is_dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Type, TypeVar
 
+import pandas as pd
+
 T = TypeVar("T")
 
 
@@ -29,7 +31,8 @@ def load_json(path: Path) -> Dict[str, Any]:
 def _strict(cls: Type[T], data: Mapping[str, Any], ctx: str) -> T:
     if not isinstance(data, Mapping):
         raise ConfigError(f"{ctx}: 期望对象，得到 {type(data).__name__}")
-    names = {f.name for f in fields(cls)}
+    # in_memory 字段承载 DataFrame，无法序列化，不属于 JSON 可写项
+    names = {f.name for f in fields(cls) if not f.metadata.get("in_memory")}
     unknown = sorted(set(data) - names)
     if unknown:
         raise ConfigError(f"{ctx}: 未知配置项 {unknown}；可用项为 {sorted(names)}")
@@ -52,34 +55,65 @@ def _nested(sub: type, many: bool = False, **kw) -> Any:
     return field(metadata={"dataclass": sub, "many": many}, **kw)
 
 
+# 内存数据源字段。compare=False 是必需的：dataclass 自动生成的 __eq__ 拿两个内容相同
+# 但非同一对象的 DataFrame 相比会抛「truth value is ambiguous」。repr=False 则避免
+# 整张表被打进错误信息。
+def _frame() -> Any:
+    return field(default=None, compare=False, repr=False, metadata={"in_memory": True})
+
+
+# path 与 frame 恰好给出一个：两个都给无从判断以哪个为准，都不给则没有数据来源
+def _check_source(spec, ctx: str) -> None:
+    has_path, has_frame = bool(spec.path), spec.frame is not None
+    if has_path and has_frame:
+        raise ConfigError(f"{ctx}: path 与 frame 只能给一个，不能同时指定")
+    if not has_path and not has_frame:
+        raise ConfigError(f"{ctx}: 必须给出 path（文件路径）或 frame（内存 DataFrame）")
+
+
 # ============================== ① Input ==============================
+# 三个数据源 Spec 同构：数据来自 path 指向的文件，或 frame 持有的内存 DataFrame。
+# column_map 留空时按契约列名（date / id / alpha 等）在源表中同名匹配，
+# 源列名与契约一致的表因此无需声明映射。
 @dataclass
 class SignalSpec:
     name: str
-    path: str
-    column_map: Dict[str, str]
+    path: Optional[str] = None
+    column_map: Dict[str, str] = field(default_factory=dict)
     format: Optional[str] = None
     dropna: bool = True
     read_kwargs: Dict[str, Any] = field(default_factory=dict)
+    frame: Optional[pd.DataFrame] = _frame()
+
+    def __post_init__(self) -> None:
+        _check_source(self, f"input.signals[{self.name}]")
 
 
 @dataclass
 class PriceSpec:
-    path: str
-    column_map: Dict[str, str]
+    path: Optional[str] = None
+    column_map: Dict[str, str] = field(default_factory=dict)
     format: Optional[str] = None
     restrict_to_signal_assets: bool = True
     read_kwargs: Dict[str, Any] = field(default_factory=dict)
+    frame: Optional[pd.DataFrame] = _frame()
+
+    def __post_init__(self) -> None:
+        _check_source(self, "input.prices")
 
 
 @dataclass
 class ReferenceSpec:
     name: str
-    path: str
-    column_map: Dict[str, str]
+    path: Optional[str] = None
+    column_map: Dict[str, str] = field(default_factory=dict)
     format: Optional[str] = None
     frequency: str = "daily"  # daily=按持有期复利, period=已是周期收益直接对齐
     read_kwargs: Dict[str, Any] = field(default_factory=dict)
+    frame: Optional[pd.DataFrame] = _frame()
+
+    def __post_init__(self) -> None:
+        _check_source(self, f"input.references[{self.name}]")
 
 
 @dataclass
@@ -349,7 +383,9 @@ class VisualizerConfig:
     output_dir: Optional[str] = None
     charts: List[ChartSpec] = _nested(ChartSpec, many=True, default_factory=list)
     tables: List[TableSpec] = _nested(TableSpec, many=True, default_factory=list)
-    style: StyleSpec = _nested(StyleSpec, default_factory=StyleSpec)
+    # 留空 = 渲染时取 settings.style（见 Visualizer.__init__），使全局样式改动对
+    # 未显式声明样式的配置生效。JSON 里写了 style 则以 JSON 为准，不受全局影响。
+    style: Optional[StyleSpec] = _nested(StyleSpec, default=None)
     export_returns: bool = True
     vars: Dict[str, str] = field(default_factory=dict)
 
