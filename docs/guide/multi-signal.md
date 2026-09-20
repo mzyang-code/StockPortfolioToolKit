@@ -1,10 +1,23 @@
 # 多信号
 
-`input.signals` 是列表，每项一路信号。分桶、多空、IC、换手全部按 `signal_model` 分组独立计算，多路信号之间不发生任何混合。
+多路信号之间不发生任何混合：分桶、多空、IC、换手全部按 `signal_model` 分组独立计算。
 
 ## 声明多路信号
 
-### 来自不同文件
+### 用映射一次给出
+
+键即信号名，值可以是 DataFrame 或文件路径，两者可以混用：
+
+```python
+bt = spt.backtest(
+    signals={"MOM": mom_df, "STR": "signal_str.feather", "WSTR": wstr_df},
+    prices=price_df,
+    horizon=5,
+)
+bt.signal_names          # ['MOM', 'STR', 'WSTR']
+```
+
+对应的配置目录写法：
 
 ```json
 "signals": [
@@ -21,26 +34,48 @@
 ]
 ```
 
-### 来自同一文件的多个 alpha 列
+### 来自同一张表的多个 alpha 列
 
-多项 spec 指向同一个 `path`，`column_map.alpha` 各写各的列名：
+每路信号各取一列，列名不同因此需要各自声明映射。这种场景超出了 `signals={}` 的表达能力
+（同一个映射对所有信号生效），改用 `SignalSpec` 列表：
 
-```json
-"signals": [
-  {
-    "name": "RAG",
-    "path": "${DATA}/merged_pred.feather",
-    "column_map": { "date": "date", "id": "id", "alpha": "pred_rag" }
-  },
-  {
-    "name": "TGNN",
-    "path": "${DATA}/merged_pred.feather",
-    "column_map": { "date": "date", "id": "id", "alpha": "pred_tgnn" }
-  }
-]
-```
+=== "Python API"
 
-`name` 必须互不相同，重名时抛 `ContractError`。该名字会出现在结果表的 `signal_model` 列、图例与文件名中。
+    ```python
+    from stockportfoliotoolkit.config_schema import SignalSpec
+
+    bt = spt.backtest(
+        signals=[
+            SignalSpec(name="RAG",  frame=pred_df,
+                       column_map={"date": "date", "id": "id", "alpha": "pred_rag"}),
+            SignalSpec(name="TGNN", frame=pred_df,
+                       column_map={"date": "date", "id": "id", "alpha": "pred_tgnn"}),
+        ],
+        prices=price_df,
+        horizon=5,
+    )
+    ```
+
+    同一个 DataFrame 可以被多个 `SignalSpec` 引用，不会复制多份。
+
+=== "配置目录"
+
+    ```json
+    "signals": [
+      {
+        "name": "RAG",
+        "path": "${DATA}/merged_pred.feather",
+        "column_map": { "date": "date", "id": "id", "alpha": "pred_rag" }
+      },
+      {
+        "name": "TGNN",
+        "path": "${DATA}/merged_pred.feather",
+        "column_map": { "date": "date", "id": "id", "alpha": "pred_tgnn" }
+      }
+    ]
+    ```
+
+信号名必须互不相同，重名时抛 `ContractError`。该名字会出现在结果表的 `signal_model` 列、图例与文件名中。
 
 ---
 
@@ -91,6 +126,21 @@
 | 文件名 | `{name}_{weight}.png` | `{name}_{signal}_{weight}.png` |
 
 判定由 `color_mode` 自动完成。理由是分位图的色阶正是按分位铺开的，再塞进第二路信号既撞色又撞图例；而策略对比图恰恰相反——多路信号必须同图才谈得上比较。
+
+### 交互式出图时指定看哪一路
+
+`plot()` 一次返回一张图，因此画分位图时需要指定信号；留空取首路：
+
+```python
+bt.plot("long_short")                    # 三路信号叠在一张
+bt.plot("deciles", signal="MOM")         # MOM 的分位结构
+bt.plot("deciles", signal="STR")
+```
+
+`bt.save()` 则按上表的规则自动拆分，每路信号各落一张 PNG。
+
+外部基准的 `signal_model` 是基准名而不是一路策略，因此 `signal=` 过滤时基准会跟着留下，
+不需要也不应该写进去。
 
 ### 显式覆盖开关
 
@@ -162,9 +212,19 @@ decile_spread_str_vw.png
 
 ## 给两套加权各配一条基准
 
-包内不附带市场指数数据，基准由 `input.references` 声明。等权组合要配等权指数、市值加权组合要配市值加权指数——同口径才谈得上比较，而一条 `references` 会对**每个**加权方案各复制一行，直接声明两条会让两条指数同时出现在两张图上。
+包内不附带市场指数数据，基准由使用者自备。等权组合要配等权指数、市值加权组合要配市值加权指数——同口径才谈得上比较，而一条基准会对**每个**加权方案各复制一行，直接声明两条会让两条指数同时出现在两张图上。
 
-按加权方案拆成两个图表配置即可各配一条：
+这是两个预设覆盖不到的场景：需要按加权方案拆成两个图表配置，各自用 `signals` 白名单限定基准。
+
+```python
+# 两条基准都声明，先让它们进结果表
+bt = spt.backtest(
+    signals={"MOM": mom_df, "STR": str_df}, prices=price_df, horizon=5,
+    references={"SPX_EW": spx_ew_df, "SPX_VW": spx_vw_df},
+)
+```
+
+对应的配置目录写法：
 
 ```json
 // input.json
@@ -201,24 +261,40 @@ decile_spread_str_vw.png
 
 两个配置同名 `long_short` 且 `weights` 互不重叠，因此产出的 `long_short_ew.png` 与 `long_short_vw.png` 不会互相覆盖。
 
+在 Python 侧，同样的效果由 `plot()` 的覆盖参数给出——预设的字段可以逐项替换：
+
+```python
+bt.plot("long_short", weight="EW", signals=["MOM", "STR", "SPX_EW"])
+bt.plot("long_short", weight="VW", signals=["MOM", "STR", "SPX_VW"])
+```
+
 数量关系：策略对比图为 `加权方案数` 张，分位图为 `信号数 × 加权方案数` 张。
 
 ---
 
 ## 按信号过滤
 
-图表与表格都支持只取部分信号：
+图表与表格都支持只取部分信号。`signals`、`buckets`、`weights` 三个过滤条件依次生效，留空表示不过滤。
 
-```json
-{
-  "name": "mom_only",
-  "type": "cumulative_log_return",
-  "signals": ["MOM"],
-  "buckets": ["H-L"]
-}
-```
+=== "Python API"
 
-`signals`、`buckets`、`weights` 三个过滤条件依次生效，留空表示不过滤。表格的 `TableSpec` 支持同样的三个字段。
+    ```python
+    bt.summary(signal="MOM", bucket="H-L")           # 指标表
+    bt.plot("long_short", signals=["MOM"])           # 图
+    ```
+
+=== "配置目录"
+
+    ```json
+    {
+      "name": "mom_only",
+      "type": "cumulative_log_return",
+      "signals": ["MOM"],
+      "buckets": ["H-L"]
+    }
+    ```
+
+    表格的 `TableSpec` 支持同样的三个字段。
 
 ## 下一步
 

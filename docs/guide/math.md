@@ -20,9 +20,9 @@
 fwd_ret[t] = close[t + h] / close[t] - 1
 ```
 
-其中 `h = engine.forward_return.horizon`。该口径与 alpha 自身的预测期解耦——因子预测多久是因子的事，收益测多长由配置单独声明。
+其中 `h` 是 `horizon`（配置中的 `engine.forward_return.horizon`，`backtest()` 的 `horizon=` 参数）。该口径与 alpha 自身的预测期解耦——因子预测多久是因子的事，收益测多长单独声明。
 
-取信号口径（`source="signals"`）时直接使用信号文件自带的 `fwd_ret` 列，工具包不做任何再加工。
+取信号口径时直接使用信号自带的 `fwd_ret` 列，工具包不做任何再加工。
 
 ### 一期有多长
 
@@ -78,7 +78,7 @@ ann_vol = std(r, ddof=1) × √P
 sharpe = (ann_ret - risk_free_rate) / ann_vol
 ```
 
-`risk_free_rate` 直接作用于**年化**收益，因此配置中应填年化无风险利率。`ann_vol` 非有限或不为正时返回 NaN。
+`risk_free_rate` 直接作用于**年化**收益，因此应填年化无风险利率。`ann_vol` 非有限或不为正时返回 NaN。
 
 ### max_drawdown —— 最大回撤
 
@@ -103,7 +103,12 @@ total_equity = cumprod(1 + r)[-1]
 hit_rate = mean(r > 0)
 ```
 
-严格大于 0 才计入，收益恰为 0 的期记作未命中。该指标不在默认 `metrics` 列表中，需显式配置。
+严格大于 0 才计入，收益恰为 0 的期记作未命中。该指标不在默认 `metrics` 列表中，需显式给出：
+
+```python
+spt.backtest(..., metrics=["ann_ret", "ann_vol", "sharpe",
+                           "max_drawdown", "total_equity", "hit_rate"])
+```
 
 ---
 
@@ -199,7 +204,7 @@ wᵢ = capᵢ / Σcap
 
 ## 基准
 
-基准一律来自 `input.references`，包内不附带市场指数数据，也不存在绕过配置直接绘制的基准曲线。
+基准一律由使用者声明（配置中的 `input.references`，`backtest()` 的 `references=` 参数），包内不附带市场指数数据，也不存在绕过声明直接绘制的基准曲线。
 
 `frequency="daily"` 的序列在 `[锚点 + reference_lag, 锚点 + reference_lag + horizon)` 窗口上复利，窗口长度取 `horizon` 而非 `holding_days`——基准与组合必须测同一个窗口才可比。`frequency="period"` 的序列已是周期收益，直接按调仓日历对齐。
 

@@ -4,10 +4,44 @@
 
 ```
 InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult──▶ Analyzer ──AnalysisResult──▶ Visualizer ──▶ PNG / CSV
-   input.json                     engine.json                     analyzer.json                visualizer.json
 ```
 
-每个模块拥有独立的 JSON 配置和唯一的公开入口（`run()`），因此任何一环都可以单独替换或单独驱动，而不影响其余模块。
+每个模块拥有唯一的公开入口（`run()`），因此任何一环都可以单独替换或单独驱动，而不影响其余模块。
+
+## 两条入口，同一条流水线
+
+参数送进流水线有两种方式。它们的差别只在「参数怎么写」，模块、契约与计算完全相同。
+
+| | `backtest()` | 配置目录 |
+|---|---|---|
+| 参数形式 | 扁平关键字参数 | 四份 JSON |
+| 数据来源 | DataFrame 或文件路径 | 文件路径 |
+| 适合 | notebook 中的交互式分析 | 批量执行、复现归档 |
+| 产出 | `BacktestResult` 对象 | `PipelineResult` + 落盘文件 |
+
+```python
+bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)   # 门面
+result = spt.run_pipeline("configs/")                              # 配置目录
+```
+
+`backtest()` 本身不含任何计算：它把扁平参数组装成 `InputConfig` / `EngineConfig` /
+`AnalyzerConfig` / `VisualizerConfig`，再依次驱动同样的四个模块。两条路径因此**逐值一致**，
+包括 `members`、`aligned` 这类最底层的中间产物。
+
+`bt.to_config()` 可把门面这边的参数反向导出成四份 JSON，交给 `run_pipeline` 复跑。
+
+!!! note "第三种方式：直接构造配置对象"
+
+    四个 Config 都是普通 dataclass，可以用 Python 直接构造而不经过 JSON，适合预设覆盖不到
+    又不想写文件的场景：
+
+    ```python
+    from stockportfoliotoolkit.config_schema import InputConfig, PriceSpec, SignalSpec
+
+    cfg = InputConfig(prices=PriceSpec(frame=price_df),
+                      signals=[SignalSpec(name="MOM", frame=alpha_df)])
+    bundle = InputProcessor(cfg).run()
+    ```
 
 ## 列名唯一真源
 
@@ -34,9 +68,18 @@ InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult─�
 
 ## ① InputProcessor
 
-职责：读取文件 → 标准化列名 → 建立调仓日历 → 打包成 `InputBundle`。
+职责：取数 → 标准化列名 → 建立调仓日历 → 打包成 `InputBundle`。
 
-包内没有任何硬编码路径，文件位置与列名映射全部来自配置。内置支持 `feather`、`parquet`、`csv` 三种格式。
+数据可以来自文件，也可以是内存中的 DataFrame。两者走同一条处理链路——差别只在取数那一步，
+之后的列映射、dtype 归一与缺失统计完全一致。文件内置支持 `feather`、`parquet`、`csv` 三种格式。
+
+```python
+SignalSpec(name="MOM", path="${DATA}/mom.feather")   # 文件
+SignalSpec(name="MOM", frame=alpha_df)               # 内存
+```
+
+`path` 与 `frame` 恰好给一个：两个都给无从判断以哪个为准，都不给则没有数据来源。
+`frame` 承载的是 DataFrame，无法序列化，因此不是 JSON 可写项——配置里写 `frame` 会被拒绝。
 
 入口处即拦截的结构性错误：
 
@@ -45,6 +88,20 @@ InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult─�
 - 价格面板存在重复的 `(date, id)`——会让市值关联膨胀
 - 价格面板过滤后为空
 - 调仓日历为空
+
+### 列名映射的两种模式
+
+`column_map` 写法为 `{"包内列名": "源文件列名"}`。它整体留空与写了内容，含义不同：
+
+| `column_map` | 行为 |
+|---|---|
+| 整体留空 | **自动识别**：按契约列名在源表中同名匹配，匹配不上的必需列报错 |
+| 写了内容 | **显式模式**：完全以声明为准，未声明的列一律不取 |
+
+只认「整体留空」而不逐列补全，是因为在显式模式下遗漏某列是有意义的声明：`prices` 不映射
+`close` 正是「本面板无可用价格序列，只供市值与交易日历」的表达方式。逐列补全会把这个开关废掉。
+
+源表列名已经是 `date` / `id` / `alpha` 时因此不必写映射。
 
 ### 调仓日历的构建
 
@@ -131,6 +188,33 @@ InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult─�
 
 职责：把 `AnalysisResult` 渲染成 PNG 与 CSV。
 
+图表的完整配置有五十余个字段，其中绝大多数是样式。实际决定「画什么」的只有 `buckets` 与
+`color_mode` 两项，因此常用组合收敛成了两个预设名：
+
+| 预设 | 等价配置 | 用途 |
+|---|---|---|
+| `long_short` | `buckets=["H-L","REF"]`、`color_mode="palette"` | 多空腿与基准对比 |
+| `deciles` | 分位桶 + `H-L`、`color_mode="gradient"` | 拆解单一策略的分位结构 |
+
+```python
+bt.plot("long_short")      # 返回 matplotlib Figure
+bt.save("outputs/")        # 两个预设各出一张
+```
+
+`deciles` 的桶列表按 `n_buckets` 动态生成。手写配置时这串 `"0".."9"` 与 `engine.n_buckets`
+分处两个文件，改一处而忘了另一处，图与数据就对不上。
+
+样式本身不进预设也不进函数签名，集中在全局 `settings`：
+
+```python
+spt.settings.style.figsize = (10, 6)
+spt.settings.style.palette = {"MOM": "#1f77b4"}
+spt.settings.reset()
+```
+
+配置中显式写了 `style` 时以配置为准，不受全局影响；留空则渲染时取 `settings.style`，
+因此全局改动对已构造好的配置同样生效。
+
 图表先按**加权方案**切分，再按图表类型决定多路信号怎么放：
 
 | | 策略对比图（`color_mode: palette`） | 分位图（`color_mode: gradient`） |
@@ -148,15 +232,18 @@ InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult─�
 
 ## 扩展点
 
-每个阶段暴露一个注册表。注册自定义类后，在 JSON 里按名字引用即可，无需修改包内代码。
+每个阶段暴露一个注册表。注册自定义类后按名字引用即可，无需修改包内代码。
 
-| 注册表 | 基类 | 配置位置 | 内置项 |
+| 注册表 | 基类 | 引用位置 | 内置项 |
 |---|---|---|---|
-| `ALPHA_SOURCES` / `PRICE_SOURCES` / `REFERENCE_SOURCES` | `AlphaSource` 等 | `format` | `feather`、`parquet`、`csv` |
-| `WEIGHTERS` | `Weighter` | `engine.weights` | `ew`、`vw` |
-| `METRICS` | `Metric` | `analyzer.metrics` | `ann_ret`、`ann_vol`、`sharpe`、`max_drawdown`、`total_equity`、`hit_rate` |
+| `ALPHA_SOURCES` / `PRICE_SOURCES` / `REFERENCE_SOURCES` | `AlphaSource` 等 | `format` | `feather`、`parquet`、`csv`、`frame` |
+| `WEIGHTERS` | `Weighter` | `engine.weights` / `weights=` | `ew`、`vw` |
+| `METRICS` | `Metric` | `analyzer.metrics` / `metrics=` | `ann_ret`、`ann_vol`、`sharpe`、`max_drawdown`、`total_equity`、`hit_rate` |
 | `CHARTS` | `Chart` | `charts[].type` | `cumulative_log_return` |
 | `TABLES` | `Table` | `tables[].type` | `summary`、`ic`、`turnover` |
+
+`frame` 是内存 DataFrame 的实现键，由 `spec.frame is not None` 自动选中，不需要也不应该写进
+`format`。
 
 ```python
 from stockportfoliotoolkit.engine import WEIGHTERS, Weighter
@@ -174,7 +261,7 @@ class InverseVolWeighter(Weighter):
 
 ---
 
-## 配置的严格校验
+## 严格校验
 
 四份配置由 dataclass 定义，加载时逐项严格校验：未知键直接拒绝并列出可用项。
 
@@ -182,4 +269,24 @@ class InverseVolWeighter(Weighter):
 ConfigError: engine: 未知配置项 ['n_bucket']；可用项为 ['forward_return', 'holding_days', ...]
 ```
 
-这条规则的用意是让拼写错误在入口处暴露，而不是被静默忽略后产出一份用了默认值的结果。
+`backtest()` 是普通 Python 函数，拼错参数名同样在调用处报 `TypeError`：
+
+```
+TypeError: backtest() got an unexpected keyword argument 'n_bucket'
+```
+
+两条路径都不接受静默忽略。这条规则在回测里尤其要紧——被忽略的参数会让程序退回默认值，
+照样算出一条看起来完全正常的净值曲线，没有任何迹象提示结果用的不是你写的参数。
+
+## 按数据推导的默认值
+
+`backtest()` 有三处默认值不是固定常数，而是看数据定的。它们各自对应一类容易算错又不报错的情形。
+
+| 参数 | 缺省行为 | 不这样做会怎样 |
+|---|---|---|
+| `rebalance_freq` | 取 `horizon` | 两者不等时相邻持有窗口重叠或留空仓缺口，净值与回撤失真 |
+| `weights` | 价格面板有 `cap` 才加 `vw` | 无市值数据时市值加权产出整列 NaN，不报错 |
+| `forward_return.source` | 信号自带 `fwd_ret` 则取 `signals` | 取 `close` 会静默丢弃那一列算好的收益 |
+
+三者都可以显式覆盖，且覆盖后原有告警照常发出——自动缺省只是把正确口径设成默认，
+不掩盖有意为之的差异。详见 [Python API 参考](../reference/api.md)。

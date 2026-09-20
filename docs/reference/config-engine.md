@@ -2,7 +2,8 @@
 
 Portfolio Engine 的配置。职责是把标准化后的面板切成分位桶、按加权方案折算成组合收益，并产出多空腿与基准行。
 
-对应 `EngineConfig`，可由 `EngineConfig.from_file("configs/engine.json")` 单独加载。
+对应 `EngineConfig`，可由 `EngineConfig.from_file("configs/engine.json")` 单独加载，也可以用 Python 直接构造。
+走 `backtest()` 时这些字段由函数参数组装，对应关系见 [Python API 参考](api.md)。
 
 ## 字段总览
 
@@ -45,6 +46,15 @@ Portfolio Engine 的配置。职责是把标准化后的面板切成分位桶、
 ### source
 
 `str`，默认 `"prices"`。
+
+!!! note "`backtest()` 的默认值不同"
+
+    配置这边固定默认 `"prices"`；`backtest()` 则按数据推导——信号提供 `fwd_ret` 时取
+    `"signals"`，否则取 `"prices"`。
+
+    差别在于两者掌握的信息量不同：写配置的人知道自己的数据长什么样，而 `backtest()`
+    要在看过数据之后才能定。自带列优先于 `close`，是因为前者是专门算过一遍实现收益的结果，
+    后者往往只是价格面板顺带提供的。
 
 === "prices"
 

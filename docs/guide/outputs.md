@@ -2,14 +2,40 @@
 
 Visualizer 把 `AnalysisResult` 渲染成 PNG 与 CSV，并返回落盘文件清单。图与表平铺在同一层，不分子目录。
 
+## 不落盘也能取用全部结果
+
+交互式分析时产物不必先写到磁盘。`BacktestResult` 保留了每一层的中间产物：
+
+```python
+bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
+
+bt.summary()        # 指标表
+bt.returns          # 逐期组合收益长表
+bt.curves           # 净值与累计对数收益曲线
+bt.ic, bt.turnover  # 诊断序列
+bt.members          # 逐期分桶成分明细
+bt.aligned          # alpha × 前视收益 × 市值 的对齐面板
+```
+
+要落盘时再调 `save()`，见下文。
+
 ## 落盘位置
 
-| `visualizer.output_dir` | 走 `run_pipeline` | 单独用 `Visualizer(cfg)` |
+| `output_dir` | 走 `run_pipeline` / `save()` | 单独用 `Visualizer(cfg)` |
 |---|---|---|
-| 留空 | 落到**首路信号文件同级**的 `outputs/` | 抛 `ContractError` |
+| 留空，输入是文件 | 落到**首路信号文件同级**的 `outputs/` | 抛 `ContractError` |
+| 留空，输入是内存 DataFrame | 抛 `ContractError` | 抛 `ContractError` |
 | 显式给出 | 按给出的路径 | 按给出的路径 |
 
-留空是推荐做法：产物与数据放在一起，不随进程当前工作目录漂移。
+输入为文件时留空是推荐做法：产物与数据放在一起，不随进程当前工作目录漂移。
+
+内存 DataFrame 没有数据文件可作落点锚，因此必须显式给出目录——不猜测落点，也不悄悄写进当前
+工作目录：
+
+```python
+bt.save("outputs/")                              # 显式给出
+bt = spt.backtest(..., output_dir="outputs/")    # 或在回测时就定好
+```
 
 ```
 <信号文件所在目录>/
@@ -39,11 +65,18 @@ Visualizer 把 `AnalysisResult` 渲染成 PNG 与 CSV，并返回落盘文件清
 
 ## 图表
 
-每个 `charts[]` 条目 × 每个加权方案产出一张 PNG。文件名规则：
+每个图表配置 × 每个加权方案产出一张 PNG。`save()` 默认用 `long_short` 与 `deciles` 两个预设，
+也可以只要其中之一：
+
+```python
+bt.save("outputs/", charts=["long_short"], tables=["summary"])
+```
+
+文件名规则：
 
 ```
-{charts[].name}_{weight}.png              # 不拆分信号
-{charts[].name}_{signal}_{weight}.png     # 分位图逐信号拆分
+{图表名}_{weight}.png              # 不拆分信号
+{图表名}_{signal}_{weight}.png     # 分位图逐信号拆分
 ```
 
 `weight` 取加权方案标签的小写形式（`EW` → `ew`）。信号名转小写并把非字母数字压成连字符。
@@ -145,20 +178,36 @@ Visualizer 把 `AnalysisResult` 渲染成 PNG 与 CSV，并返回落盘文件清
 
 ## Python 侧的产物
 
-不落盘也能直接取用全部中间产物：
+两条入口的返回对象携带同样的中间产物，只是取用方式不同：
 
-```python
-from stockportfoliotoolkit import run_pipeline
+=== "backtest()"
 
-result = run_pipeline("configs/", render=False)    # 只算不出图
-```
+    ```python
+    bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
+    ```
 
-| 字段 | 类型 | 内容 |
-|---|---|---|
-| `result.bundle` | `InputBundle` | 标准化后的信号、价格、调仓日历 |
-| `result.engine` | `EngineResult` | 逐期组合收益、成分明细、对齐面板 |
-| `result.analysis` | `AnalysisResult` | 指标汇总、曲线、换手、IC |
-| `result.outputs` | `list[Path]` | 已落盘的文件清单（`render=False` 时为空） |
+    | 字段 | 内容 |
+    |---|---|
+    | `bt.returns` / `bt.curves` / `bt.ic` / `bt.turnover` | 直接是 DataFrame |
+    | `bt.members` / `bt.aligned` | 分桶成分、对齐面板 |
+    | `bt.summary(bucket=..., weight=...)` | 指标表，带过滤 |
+    | `bt.bundle` / `bt.engine` / `bt.analysis` | 三份原始契约产物 |
+    | `bt.config` | 本次实验的完整 `PipelineConfig` |
+
+=== "run_pipeline()"
+
+    ```python
+    result = spt.run_pipeline("configs/", render=False)    # 只算不出图
+    ```
+
+    | 字段 | 类型 | 内容 |
+    |---|---|---|
+    | `result.bundle` | `InputBundle` | 标准化后的信号、价格、调仓日历 |
+    | `result.engine` | `EngineResult` | 逐期组合收益、成分明细、对齐面板 |
+    | `result.analysis` | `AnalysisResult` | 指标汇总、曲线、换手、IC |
+    | `result.outputs` | `list[Path]` | 已落盘的文件清单（`render=False` 时为空） |
+
+`bt.returns` 等属性只是 `bt.engine.returns` 的转发，两者是同一个对象。
 
 ### 长表结构
 
@@ -185,6 +234,22 @@ wide = to_legacy_wide(result.engine.returns)
 ```
 
 该函数沿用旧项目的列名，不跟随包内改名。
+
+---
+
+## 导出为配置目录
+
+`to_config()` 把一次实验的完整参数导成四份 JSON，供 `run_pipeline` 复跑或随论文归档：
+
+```python
+bt.to_config("paper/configs/", data_dir="paper/data/")
+result = spt.run_pipeline("paper/configs/")        # 复现
+```
+
+内存 DataFrame 写不进 JSON，因此内存输入时需给出 `data_dir`：表先落盘到该目录，再把路径写进
+配置。复现包本就需要数据随行，这一步是该场景的固有要求而非额外负担。
+
+导出的配置包含 `save()` 用的图表与数据表预设，因此复跑时产物与原来一致。
 
 ---
 

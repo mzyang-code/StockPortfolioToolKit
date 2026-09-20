@@ -23,21 +23,21 @@
     pip install -e .
     ```
 
-    对应 Python 3.12.2 与全部 85 个测试通过的那一组确切版本。
+    对应 Python 3.12.2 与全部测试通过的那一组确切版本。
 
 安装后会注册命令行入口 `spt`。
 
 ## 准备数据
 
-包内没有任何硬编码路径。配置指向文件、声明 `column_map` 即可，内置支持 `feather`、`parquet`、`csv` 三种格式。
+包内没有任何硬编码路径与列名。三类输入，各自的必需列：
 
-| 输入 | 映射后必需列 | 说明 |
+| 输入 | 必需列 | 说明 |
 |---|---|---|
-| `prices` | `date`、`id` | 每个 (date, id) 一行；`close` 仅 `forward_return.source="prices"` 时需要，`cap` 仅市值加权时需要 |
-| `signals[]` | `date`、`id`、`alpha` | 每个信号一项，`fwd_ret` 可选 |
-| `references[]` | `date`、`ret` | 外部基准序列，`frequency` 取 `daily` 或 `period` |
+| 信号 | `date`、`id`、`alpha` | 每个 (date, id) 一行，`fwd_ret` 可选 |
+| 价格面板 | `date`、`id` | `close` 仅价格口径时需要，`cap` 仅市值加权时需要 |
+| 基准 | `date`、`ret` | 可选，`frequency` 取 `daily` 或 `period` |
 
-只带前视收益、没有价格序列的预测结果文件是一等输入：`prices.column_map` 中不写 `close`，把 `engine.forward_return.source` 设为 `"signals"`，再映射文件自带的 `fwd_ret` 列即可。此时价格面板只承担两件事——关联市值、定义交易日历。走 Python API 时这一步是自动的：信号自带 `fwd_ret` 即取该列，无需声明。
+数据可以是内存中的 DataFrame，也可以是磁盘上的文件（`feather`、`parquet`、`csv`），两者对等。
 
 ## 跑第一次回测
 
@@ -55,12 +55,17 @@ bt.save("outputs/")            # 图与表落盘
 
 `horizon` 是每期实现收益的测量期长度（交易日），必填——它定义了「一期有多长」，全包只此一处事实来源。
 
-三处默认值按数据推导，省去了手工保持一致的负担：
+其余参数多数不必写，因为按数据推导：
 
-- `rebalance_freq` 缺省等于 `horizon`，相邻持有窗口首尾相接
-- 价格表含 `cap` 列时自动加上市值加权，没有则只做等权
-- 信号自带 `fwd_ret` 时用该列，否则由 `close` 推算
-- 列名已是 `date` / `id` / `alpha` 时无需声明映射
+| 推导项 | 规则 |
+|---|---|
+| 列名映射 | 列名已是 `date` / `id` / `alpha` 时自动识别 |
+| `rebalance_freq` | 缺省等于 `horizon`，相邻持有窗口首尾相接 |
+| `weights` | 价格表含 `cap` 列时加上市值加权，没有则只做等权 |
+| 前视收益口径 | 信号自带 `fwd_ret` 时用该列，否则由 `close` 推算 |
+
+这几项各自对应一类容易算错又不报错的情形，理由见 [核心概念](concepts.md#按数据推导的默认值)。
+全部可以显式覆盖，且覆盖后原有告警照常发出。
 
 多路 alpha 用映射给出，键即信号名：
 
@@ -69,11 +74,20 @@ bt = spt.backtest(signals={"MOM": mom_df, "REV": rev_df}, prices=price_df, horiz
 bt.plot("deciles", signal="MOM")
 ```
 
-文件路径与内存表等价：
+文件路径与内存表等价，可以混用：
 
 ```python
 bt = spt.backtest(signals="alpha.feather", prices="prices.feather", horizon=5)
 ```
+
+!!! tip "notebook 里画不出图时"
+
+    `plot()` 返回的 `Figure` 脱离 pyplot 全局状态直接构造，Jupyter 需要先激活 inline 后端
+    才会渲染：
+
+    ```python
+    %matplotlib inline
+    ```
 
 逐参数说明见 [Python API 参考](../reference/api.md)。
 
@@ -141,6 +155,9 @@ configs/
 ConfigError: engine: 未知配置项 ['n_bucket']；可用项为 ['forward_return', 'holding_days', ...]
 ```
 
+`backtest()` 是普通函数，拼错参数名同样在调用处报 `TypeError`。两条路径都不接受静默忽略——
+被忽略的参数会让程序退回默认值，照样算出一条看起来正常的净值曲线。
+
 ## 运行
 
 === "命令行"
@@ -159,19 +176,27 @@ ConfigError: engine: 未知配置项 ['n_bucket']；可用项为 ['forward_retur
     result = run_pipeline("configs/")
     ```
 
-各阶段也可以单独驱动，中间产物在模块间以固定契约传递：
+各阶段也可以单独驱动，中间产物在模块间以固定契约传递。配置既可以从 JSON 读，也可以用 Python 直接构造：
 
 ```python
-from stockportfoliotoolkit import InputProcessor, PortfolioEngine, Analyzer, Visualizer
-from stockportfoliotoolkit.config_schema import InputConfig, EngineConfig
+from stockportfoliotoolkit import InputProcessor, PortfolioEngine
+from stockportfoliotoolkit.config_schema import EngineConfig, InputConfig
 
 bundle = InputProcessor(InputConfig.from_file("configs/input.json")).run()
 engine = PortfolioEngine(EngineConfig.from_file("configs/engine.json")).run(bundle)
 ```
 
+`bt.bundle` 也可以接到这里复用，扫参数时不必反复读同一份面板：
+
+```python
+for n in (5, 10, 20):
+    cfg = EngineConfig(n_buckets=n, forward_return=ForwardReturnSpec(horizon=5))
+    PortfolioEngine(cfg).run(bt.bundle)
+```
+
 ## 读取结果
 
-`PipelineResult` 保留了全部中间产物：
+`PipelineResult` 保留了全部中间产物（`backtest()` 的返回对象见 [产物与落盘](outputs.md#python-侧的产物)）：
 
 | 字段 | 类型 | 内容 |
 |---|---|---|
@@ -194,29 +219,30 @@ summary[summary["bucket"] == "H-L"]      # 只看多空腿
 
 ## 产物落盘位置
 
-`visualizer.output_dir` 留空时，产物落到**首路信号文件同级**的 `outputs/`，与数据放在一起，不随进程当前工作目录漂移：
+输入为文件且 `output_dir` 留空时，产物落到**首路信号文件同级**的 `outputs/`，与数据放在一起，不随进程当前工作目录漂移：
 
 ```
 <信号文件所在目录>/
 ├── signal_mom.feather
 └── outputs/                          ← 自动创建
-    ├── long_short_ew.png             # 每个 charts[] × 每个加权方案一张
+    ├── long_short_ew.png             # 每个图表配置 × 每个加权方案一张
     ├── long_short_vw.png
-    ├── decile_spread_mom_ew.png      # 分位图逐信号拆分
-    ├── metrics_by_bucket.csv         # 每个 tables[] 一份
-    ├── summary_metrics.csv           # export_returns=true 时的完整指标长表
+    ├── deciles_mom_ew.png            # 分位图逐信号拆分
+    ├── metrics.csv                   # 每个数据表配置一份
+    ├── summary_metrics.csv           # 完整指标长表，未经百分比换算与舍入
     └── curves.feather
 ```
 
 图与表平铺在同一层，不分子目录。
 
-!!! warning "相对路径按进程当前工作目录解析"
+!!! warning "内存 DataFrame 输入时必须显式给出目录"
 
-    显式给出 `output_dir` 时，相对路径不按配置文件所在目录解析。跨目录启动会导致产物漂移，因此建议要么留空使用默认锚点，要么写绝对路径。
+    此时没有数据文件可作落点锚，`save()` 会报错而不是猜测落点，也不会悄悄写进当前工作目录。
 
-    单独使用 `Visualizer(cfg)` 而不走 `run_pipeline` 时没有信号路径可作锚点，此时必须显式给出 `output_dir`，否则报错——不会悄悄写入当前目录。
+    显式给出 `output_dir` 时，相对路径不按配置文件所在目录解析。跨目录启动会导致产物漂移，因此建议写绝对路径。
 
 ## 下一步
 
 - [Python API 参考](../reference/api.md)：`backtest()` 逐参数说明与结果对象
+- [核心概念](concepts.md)：两条入口的关系、三份契约与扩展点
 - [engine.json 配置参考](../reference/config-engine.md)：分桶、加权与前视收益的逐字段说明

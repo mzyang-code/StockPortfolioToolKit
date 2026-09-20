@@ -1,8 +1,9 @@
 # input.json
 
-Input Processor 的配置。职责是读取文件、把源列名映射成包内统一列名、建立调仓日历，产出 `InputBundle`。
+Input Processor 的配置。职责是取数、把源列名映射成包内统一列名、建立调仓日历，产出 `InputBundle`。
 
-对应 `InputConfig`，可由 `InputConfig.from_file("configs/input.json")` 单独加载。
+对应 `InputConfig`，可由 `InputConfig.from_file("configs/input.json")` 单独加载，也可以用 Python 直接构造。
+走 `backtest()` 时这些字段由函数参数组装，对应关系见 [Python API 参考](api.md)。
 
 ## 字段总览
 
@@ -10,20 +11,20 @@ Input Processor 的配置。职责是读取文件、把源列名映射成包内�
 |---|---|---|---|
 | `signals[]` | `list` | **必填，至少一项** | alpha 信号源 |
 | `signals[].name` | `str` | **必填** | 信号名，出现在结果表 `signal_model` 列 |
-| `signals[].path` | `str` | **必填** | 文件路径，支持 `${VAR}` |
-| `signals[].column_map` | `dict` | **必填** | 至少映射 `date`、`id`、`alpha` |
+| `signals[].path` | `str \| null` | `null` | 文件路径，支持 `${VAR}`；与 `frame` 二选一 |
+| `signals[].column_map` | `dict` | `{}` | 留空按契约列名自动识别 |
 | `signals[].format` | `str \| null` | `null` | 留空按后缀推断 |
 | `signals[].dropna` | `bool` | `true` | 丢弃关键列缺失的行 |
 | `signals[].read_kwargs` | `dict` | `{}` | 透传给底层读取函数 |
-| `prices.path` | `str` | **必填** | 价格面板路径 |
-| `prices.column_map` | `dict` | **必填** | 至少映射 `date`、`id` |
+| `prices.path` | `str \| null` | `null` | 价格面板路径；与 `frame` 二选一 |
+| `prices.column_map` | `dict` | `{}` | 留空按契约列名自动识别 |
 | `prices.format` | `str \| null` | `null` | 留空按后缀推断 |
 | `prices.restrict_to_signal_assets` | `bool` | `true` | 只保留信号中出现的资产 |
 | `prices.read_kwargs` | `dict` | `{}` | 透传给底层读取函数 |
 | `references[]` | `list` | `[]` | 外部基准序列 |
 | `references[].name` | `str` | **必填** | 基准名，在结果表中作为 `signal_model` |
-| `references[].path` | `str` | **必填** | 文件路径 |
-| `references[].column_map` | `dict` | **必填** | 至少映射 `date`、`ret` |
+| `references[].path` | `str \| null` | `null` | 文件路径；与 `frame` 二选一 |
+| `references[].column_map` | `dict` | `{}` | 留空按契约列名自动识别 |
 | `references[].frequency` | `str` | `"daily"` | 取 `daily` 或 `period` |
 | `references[].format` | `str \| null` | `null` | 留空按后缀推断 |
 | `references[].read_kwargs` | `dict` | `{}` | 透传给底层读取函数 |
@@ -38,11 +39,27 @@ Input Processor 的配置。职责是读取文件、把源列名映射成包内�
 
 ## 通用字段
 
-以下三个字段在 `signals[]`、`prices`、`references[]` 中语义一致。
+以下字段在 `signals[]`、`prices`、`references[]` 中语义一致。
 
-### path
+### path 与 frame
 
-文件路径，支持 `${VAR}` 形式的变量展开。取值顺序：先查配置的 `vars`，再查环境变量，两处都没有则抛 `KeyError`。路径中的 `~` 会展开为用户主目录。
+数据来源。`path` 指向文件，`frame` 持有内存中的 DataFrame，**恰好给一个**：
+
+| 给出的 | 结果 |
+|---|---|
+| 只有 `path` | 从文件读取 |
+| 只有 `frame` | 直接取内存表 |
+| 两个都给 | `ConfigError: path 与 frame 只能给一个` |
+| 都不给 | `ConfigError: 必须给出 path 或 frame` |
+
+`frame` 承载 DataFrame，无法序列化，因此**不是 JSON 可写项**——配置里写它会被当作未知配置项拒绝。
+它只能通过 Python 构造给出：
+
+```python
+SignalSpec(name="MOM", frame=alpha_df)
+```
+
+`path` 支持 `${VAR}` 形式的变量展开。取值顺序：先查配置的 `vars`，再查环境变量，两处都没有则抛 `KeyError`。路径中的 `~` 会展开为用户主目录。
 
 ```json
 {
@@ -68,12 +85,24 @@ Input Processor 的配置。职责是读取文件、把源列名映射成包内�
 
 ### column_map
 
-源列名到包内统一列名的映射，写法为 `{"包内列名": "源文件列名"}`。
+源列名到包内统一列名的映射，写法为 `{"包内列名": "源文件列名"}`，默认 `{}`。
 
-列名校验在**读取整表之前**完成：先只读表头（feather/parquet 走 Arrow footer，10GB 级面板也是常数开销），确认所有需要的源列都存在，再按列下推读取，只加载用到的列。
+该字段整体留空与写了内容，行为不同：
 
-- 必需映射缺失 → `ContractError: column_map 缺少必需映射 [...]`
-- 映射的源列在文件中不存在 → `ContractError: 源列 [...] 不存在；实际列为 [...]`
+| `column_map` | 行为 |
+|---|---|
+| `{}`（留空） | **自动识别**：按契约列名在源表中同名匹配 |
+| 非空 | **显式模式**：完全以声明为准，未声明的列一律不取 |
+
+只认「整体留空」而不逐列补全，是因为在显式模式下遗漏某列是有意义的声明——`prices` 不映射
+`close` 正是「本面板无可用价格序列」的表达方式。逐列补全会把这个开关废掉。
+
+列名校验在**读取整表之前**完成：先只读表头（feather/parquet 走 Arrow footer，10GB 级面板也是常数开销），确认所有需要的源列都存在，再按列下推读取，只加载用到的列。内存表则直接取 `.columns`。
+
+- 必需列既无同名列又未声明 → `ContractError: {来源}: 缺少必需列 [...]；源列为 [...]`
+- 映射的源列不存在 → `ContractError: {来源}: 源列 [...] 不存在；实际列为 [...]`
+
+报错前缀标明来源：内存表为 `frame<信号名>`，文件为文件名。
 
 可选列（如 `fwd_ret`、`cap`）未映射或源列不存在时静默跳过，不报错。
 
@@ -124,6 +153,8 @@ alpha 信号源列表，**至少一项**，为空时抛 `ContractError`。每项
 
 ### close 的三种状态
 
+以下针对**显式模式**（`column_map` 非空）：
+
 | `column_map` 中的 `close` | 行为 |
 |---|---|
 | 已声明且源列存在 | 正常读取，可用于 `forward_return.source="prices"` |
@@ -132,13 +163,18 @@ alpha 信号源列表，**至少一项**，为空时抛 `ContractError`。每项
 
 第三种情况不会被当成第二种处理：拼写错误不应被静默降级成「没有这一列」。
 
+`column_map` 留空走自动识别时，源表中恰有 `close` 列就会被取用。要排除它，给出一个不含
+`close` 的显式映射即可。
+
 !!! tip "只有预测结果、没有价格序列时"
 
     `prices.column_map` 中不写 `close`，把 `engine.forward_return.source` 设为 `"signals"`，再映射信号文件自带的 `fwd_ret` 列即可。
 
     此时价格面板只承担两件事：关联市值、定义交易日历。
 
-`cap` 始终是可选列，仅市值加权时需要。
+    走 `backtest()` 时这一步是自动的：信号提供 `fwd_ret` 即取信号口径。
+
+`cap` 始终是可选列，仅市值加权时需要。`backtest()` 按它是否存在决定要不要把 `vw` 排进 `weights`。
 
 ### restrict_to_signal_assets
 
