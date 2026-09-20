@@ -13,7 +13,12 @@ from stockportfoliotoolkit.benchmark import (
     benchmark_label,
     load_sp500_daily,
 )
-from stockportfoliotoolkit.config_schema import ChartSpec, ConfigError, StyleSpec
+from stockportfoliotoolkit.config_schema import (
+    ChartSpec,
+    ConfigError,
+    StyleSpec,
+    VisualizerConfig,
+)
 from stockportfoliotoolkit.contracts import bucket_rank, sort_by_bucket
 from stockportfoliotoolkit.visualizer import Palette, build_chart
 from stockportfoliotoolkit.visualizer.charts import TICK_FONTSIZE
@@ -42,10 +47,7 @@ def _curves(buckets=("H-L",), signals=("S",)) -> pd.DataFrame:
     )
 
 
-# 默认关掉内置基准，让这些用例只盯自己要断言的那几条线；
-# 基准本身另有 test_benchmark 一组用例覆盖
 def _render(weight: str = "EW", **overrides):
-    overrides.setdefault("show_benchmark", False)
     spec = ChartSpec(name="curve", **overrides)
     buckets = tuple(spec.buckets) if spec.buckets else ("H-L",)
     signals = tuple(spec.signals) if spec.signals else ("S",)
@@ -235,9 +237,35 @@ def test_summary_sorted_by_weight_then_bucket():
     ]
 
 
-# ------------------------------------------------------- 内置 S&P 500 基准
+# --------------------------------------------- 图表不再自动叠加内置基准
 
-# 基准跟随该图的加权方案：EW 组合对 EW 指数，VW 组合对 VW 指数
+# 净值图已从包里移除，只保留累计对数收益一种线图
+def test_equity_chart_is_no_longer_registered():
+    from stockportfoliotoolkit.visualizer import CHARTS
+
+    assert "equity" not in CHARTS
+    assert CHARTS.names() == ["cumulative_log_return"]
+
+
+# 图表只画曲线表里的线。内置 S&P 500 序列不再自动叠加，
+# 基准改由 input.references 声明后以 REF 桶进入曲线表。
+def test_charts_draw_no_built_in_benchmark():
+    for color_mode in ("palette", "gradient"):
+        ax = _render(buckets=["H-L"], color_mode=color_mode)
+        assert [line.get_label() for line in ax.lines] == ["H-L"]
+
+
+# 开关已随内置基准一并移除；_strict 对未知配置项抛错，不静默忽略
+def test_show_benchmark_is_rejected_by_config():
+    assert not hasattr(ChartSpec(name="curve"), "show_benchmark")
+    assert not hasattr(ChartSpec(name="curve"), "wants_benchmark")
+    with pytest.raises(ConfigError, match="show_benchmark"):
+        VisualizerConfig.from_dict({"charts": [{"name": "c", "show_benchmark": True}]})
+
+
+# ------------------------------------- benchmark 模块：仅供仓库内示例调用
+
+# 曲线跟随加权方案：EW 组合对 EW 指数，VW 组合对 VW 指数
 def test_benchmark_follows_the_weight_scheme():
     assert benchmark_label("EW") == "S&P 500 EW"
     assert benchmark_label("VW") == "S&P 500 VW"
@@ -249,50 +277,12 @@ def test_benchmark_follows_the_weight_scheme():
     )
 
 
-# 策略对比图默认画基准
-def test_benchmark_is_drawn_on_comparison_charts():
-    ax = _render(show_benchmark=True)
-    assert benchmark_label("EW") in [line.get_label() for line in ax.lines]
-
-
-# 净值图已从包里移除，只保留累计对数收益一种线图
-def test_equity_chart_is_no_longer_registered():
-    from stockportfoliotoolkit.visualizer import CHARTS
-
-    assert "equity" not in CHARTS
-    assert CHARTS.names() == ["cumulative_log_return"]
-
-
-# 颜色/线型硬编码：用户在 palette、reference_color 上怎么写都改不动
-def test_benchmark_style_is_hardcoded_black():
-    hostile = StyleSpec(
-        palette={"S&P 500 EW": "#ff0000", "S&P 500 VW": "#ff0000"},
-        reference_color="#ff0000",
-        linewidth=9.9,
-    )
-    figure = build_chart("cumulative_log_return").render(
-        _curves(), ChartSpec(name="curve"), hostile, "EW"
-    )
-    line = next(
-        l for l in figure.axes[0].lines if l.get_label() == benchmark_label("EW")
-    )
-    assert line.get_color() == "#000000"
-    assert line.get_linestyle() == "-"
-    assert line.get_linewidth() == BENCHMARK_STYLE["linewidth"] != hostile.linewidth
-
-
 def test_benchmark_style_mapping_is_immutable():
     with pytest.raises(TypeError):
         BENCHMARK_STYLE["color"] = "#ff0000"
 
 
-def test_benchmark_can_be_switched_off_but_not_restyled():
-    ax = _render(show_benchmark=False)
-    assert benchmark_label("EW") not in [line.get_label() for line in ax.lines]
-    assert not hasattr(StyleSpec(), "benchmark_color")
-
-
-# 基准是买入持有后按图表日期轴取样，与调仓节奏无关
+# 基准是买入持有后按给定日期轴取样，与调仓节奏无关
 def test_benchmark_curve_is_buy_and_hold():
     daily = load_sp500_daily()
     axis = pd.DatetimeIndex(["2021-01-04", "2021-06-30", "2021-12-31"])
@@ -311,7 +301,8 @@ def test_benchmark_does_not_extrapolate():
     assert benchmark_curve(pd.DatetimeIndex(["1980-01-02", "2000-01-03"]), "VW").empty
 
 
-def test_packaged_benchmark_data_is_present_and_sane():
+# 序列不随 wheel 分发，但仓库内必须在位，否则示例与 notebook 无从复现
+def test_repo_benchmark_data_is_present_and_sane():
     daily = load_sp500_daily()
     assert len(daily) > 8000
     assert daily["date"].is_monotonic_increasing
@@ -347,15 +338,9 @@ def test_gradient_multi_signal_legend_carries_the_signal():
 
 # ------------------------------------------------- 分位图 vs 策略对比图
 
-# 分位图在拆解单一策略，多一条 S&P 500 没有意义；策略对比图才需要基准
-def test_decile_charts_drop_the_benchmark_by_default():
-    decile = ChartSpec(name="decile_spread", color_mode="gradient")
-    compare = ChartSpec(name="long_short")
-    assert decile.is_decile_view and not compare.is_decile_view
-    assert not decile.wants_benchmark()
-    assert compare.wants_benchmark()
-    ax = _render(buckets=["0", "1", "H-L"], color_mode="gradient", show_benchmark=None)
-    assert not [l for l in ax.lines if "S&P 500" in str(l.get_label())]
+def test_decile_view_is_driven_by_color_mode():
+    assert ChartSpec(name="decile_spread", color_mode="gradient").is_decile_view
+    assert not ChartSpec(name="long_short").is_decile_view
 
 
 # 分位图逐信号出图，策略对比图把所有信号叠在一张上
@@ -366,7 +351,7 @@ def test_split_by_signal_defaults_follow_the_chart_kind():
 
 # 显式设置永远压过自动判断
 def test_explicit_flags_win_over_auto():
-    spec = ChartSpec(name="d", color_mode="gradient", show_benchmark=True, split_by_signal=False)
-    assert spec.wants_benchmark() and not spec.wants_split_by_signal()
-    spec = ChartSpec(name="ls", show_benchmark=False, split_by_signal=True)
-    assert not spec.wants_benchmark() and spec.wants_split_by_signal()
+    assert not ChartSpec(
+        name="d", color_mode="gradient", split_by_signal=False
+    ).wants_split_by_signal()
+    assert ChartSpec(name="ls", split_by_signal=True).wants_split_by_signal()

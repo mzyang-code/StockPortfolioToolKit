@@ -152,11 +152,13 @@ alpha 信号源列表，**至少一项**，为空时抛 `ContractError`。每项
 
 ## references
 
-外部基准序列列表，默认为空。这里声明的基准会进入结果表，`bucket` 固定为 `REF`，`signal_model` 取 `name`。
+基准序列列表，默认为空。这里声明的基准会进入结果表，`bucket` 固定为 `REF`，`signal_model` 取 `name`。
 
-!!! info "与内置 S&P 500 基准无关"
+!!! info "这是声明基准的唯一入口"
 
-    包内自带的 S&P 500 曲线由 Visualizer 直接绘制，不需要在此声明，也不进入结果表。此处配置的是额外的外部基准序列。
+    包内不附带任何市场指数数据，Visualizer 也不会绕过配置自行绘制基准。基准数据由使用者自备，全部经由此处声明。
+
+    要让基准同时出现在图上，还需把 `"REF"` 列入 `visualizer.charts[].buckets`——仅声明 `references` 只会让它进结果表。
 
 ### frequency
 

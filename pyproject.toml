@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stockportfoliotoolkit"
-version = "0.2.0"
+version = "0.3.0"
 description = "Config-driven cross-sectional portfolio backtesting toolkit"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -41,12 +41,15 @@ Issues = "https://github.com/mzyang-code/StockPortfolioToolKit/issues"
 [project.scripts]
 spt = "stockportfoliotoolkit.cli:main"
 
+[tool.setuptools]
+# data/ 下的 S&P 500 序列受数据使用权限制，不得随 sdist 与 wheel 分发。
+# 该项在 pyproject.toml 下默认为 true，会把包目录内的非 .py 文件一并收进构建产物，
+# 因此必须显式关闭；同时不声明任何 package-data。
+# 基准数据由使用者自行准备，见 input.references。
+include-package-data = false
+
 [tool.setuptools.packages.find]
 where = ["src"]
-
-# 内置 S&P 500 基准数据，必须随 sdist 与 wheel 一起分发
-[tool.setuptools.package-data]
-stockportfoliotoolkit = ["data/*.csv.gz"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

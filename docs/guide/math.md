@@ -199,6 +199,8 @@ wᵢ = capᵢ / Σcap
 
 ## 基准
 
-包内自带的 S&P 500 基准取**买入持有**后按图表日期轴取样，与调仓节奏无关，因此不受重叠持有期影响。图表日期落在数据覆盖区间之外时记 NaN，不外推。
+基准一律来自 `input.references`，包内不附带市场指数数据，也不存在绕过配置直接绘制的基准曲线。
 
-配置中声明的外部基准则不同：`frequency="daily"` 的序列在 `[锚点 + reference_lag, 锚点 + reference_lag + horizon)` 窗口上复利，窗口长度取 `horizon` 而非 `holding_days`——基准与组合必须测同一个窗口才可比。`frequency="period"` 的序列已是周期收益，直接按调仓日历对齐。
+`frequency="daily"` 的序列在 `[锚点 + reference_lag, 锚点 + reference_lag + horizon)` 窗口上复利，窗口长度取 `horizon` 而非 `holding_days`——基准与组合必须测同一个窗口才可比。`frequency="period"` 的序列已是周期收益，直接按调仓日历对齐。
+
+因此基准与组合走同一套周期化口径：`rebalance_freq` 与 `horizon` 不等时，基准同样受重叠持有期或空仓缺口影响，不是一条独立于调仓节奏的买入持有曲线。

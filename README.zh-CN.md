@@ -67,9 +67,11 @@ engine = PortfolioEngine(EngineConfig.from_file("configs/engine.json")).run(bund
 | [数学口径](https://mzyang-code.github.io/StockPortfolioToolKit/guide/math/) | 每个指标的确切算法与失真条件 |
 | [配置参考](https://mzyang-code.github.io/StockPortfolioToolKit/reference/config-input/) | 逐字段说明类型、默认值与约束 |
 
-## 内置基准
+## 基准
 
-包内自带 CRSP S&P 500 Universe 组合日频总收益（含股息，1992-01-02 ~ 2025-12-31，8561 个交易日），随 wheel 分发，无需任何配置。等权组合的图配等权指数，市值加权组合的图配市值加权指数。
+包内不附带任何市场指数数据。基准由使用者自备，在 `input.references` 中声明后以 `REF` 桶进入结果表，并在图表的 `buckets` 含 `"REF"` 时上图。
+
+等权组合应配等权指数、市值加权组合应配市值加权指数——同口径才谈得上比较。一条 `references` 会对每个加权方案各复制一行，因此两套加权各配一条指数需要声明两条，再用两个图表配置分别限定 `weights` 与 `signals`，见[多信号](https://mzyang-code.github.io/StockPortfolioToolKit/guide/multi-signal/)。
 
 ## 本地构建文档
 

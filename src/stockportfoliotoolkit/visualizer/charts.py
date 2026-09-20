@@ -9,7 +9,6 @@ import pandas as pd
 from matplotlib.figure import Figure
 from matplotlib.ticker import ScalarFormatter
 
-from ..benchmark import BENCHMARK_STYLE, benchmark_curve, benchmark_label
 from ..config_schema import ChartSpec, StyleSpec
 from ..contracts import (
     BUCKET,
@@ -83,7 +82,6 @@ class _LineChart(Chart):
                 label=Palette.label(signal, bucket, label_template),
                 **styles[(signal, bucket)],
             )
-        self._draw_benchmark(ax, data, spec, weight)
         if not len(data):
             ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
         if spec.show_baseline and self.baseline is not None:
@@ -119,20 +117,6 @@ class _LineChart(Chart):
         fig.autofmt_xdate()
         fig.tight_layout()
         return fig
-
-    # 包内自带的 S&P 500 基准，与组合曲线共用日期轴，并跟随该图的加权方案选 EW/VW 指数。
-    # 样式取自 BENCHMARK_STYLE 且不与 style/palette 做任何合并——颜色与线型对外不可改。
-    def _draw_benchmark(self, ax, data: pd.DataFrame, spec: ChartSpec, weight: str) -> None:
-        if not spec.wants_benchmark() or not len(data):
-            return
-        curve = benchmark_curve(data[DATE], weight)
-        if curve.empty or self.value_column not in curve.columns:
-            return
-        ax.plot(
-            curve[DATE], curve[self.value_column],
-            label=benchmark_label(weight),
-            **dict(BENCHMARK_STYLE),
-        )
 
 
 @CHARTS.register()

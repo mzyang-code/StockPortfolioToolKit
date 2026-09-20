@@ -89,19 +89,17 @@
 |---|---|---|
 | 多信号 | 叠在同一张，按信号分配颜色 | **每路信号单独一张** |
 | 文件名 | `{name}_{weight}.png` | `{name}_{signal}_{weight}.png` |
-| S&P 500 基准 | 画 | 不画 |
 
 判定由 `color_mode` 自动完成。理由是分位图的色阶正是按分位铺开的，再塞进第二路信号既撞色又撞图例；而策略对比图恰恰相反——多路信号必须同图才谈得上比较。
 
-### 两个显式覆盖开关
+### 显式覆盖开关
 
 ```json
 {
   "name": "decile_spread",
   "type": "cumulative_log_return",
   "color_mode": "gradient",
-  "split_by_signal": false,     // 强制挤进同一张
-  "show_benchmark": true        // 强制画 S&P 500
+  "split_by_signal": false      // 强制挤进同一张
 }
 ```
 
@@ -152,13 +150,56 @@
 产出六张图：
 
 ```
-long_short_ew.png              # 两路信号叠在一张，带 S&P 500 等权指数
-long_short_vw.png              # 同上，带 S&P 500 市值加权指数
-decile_spread_mom_ew.png       # MOM 的十分位，色阶铺开，不带基准
+long_short_ew.png              # 两路信号叠在一张
+long_short_vw.png              # 同上
+decile_spread_mom_ew.png       # MOM 的十分位，色阶铺开
 decile_spread_mom_vw.png
 decile_spread_str_ew.png       # STR 的十分位
 decile_spread_str_vw.png
 ```
+
+---
+
+## 给两套加权各配一条基准
+
+包内不附带市场指数数据，基准由 `input.references` 声明。等权组合要配等权指数、市值加权组合要配市值加权指数——同口径才谈得上比较，而一条 `references` 会对**每个**加权方案各复制一行，直接声明两条会让两条指数同时出现在两张图上。
+
+按加权方案拆成两个图表配置即可各配一条：
+
+```json
+// input.json
+"references": [
+  { "name": "SPX_EW", "path": "${DATA}/spx_ew.csv",
+    "column_map": { "date": "date", "ret": "ret" }, "frequency": "daily" },
+  { "name": "SPX_VW", "path": "${DATA}/spx_vw.csv",
+    "column_map": { "date": "date", "ret": "ret" }, "frequency": "daily" }
+]
+```
+
+```json
+// visualizer.json
+"charts": [
+  {
+    "name": "long_short",
+    "buckets": ["H-L", "REF"],
+    "weights": ["EW"],
+    "signals": ["MOM", "STR", "SPX_EW"]
+  },
+  {
+    "name": "long_short",
+    "buckets": ["H-L", "REF"],
+    "weights": ["VW"],
+    "signals": ["MOM", "STR", "SPX_VW"]
+  }
+]
+```
+
+两处都不可省：
+
+- `buckets` 必须含 `"REF"`，否则基准行在选取阶段就被滤掉，只留在结果表里
+- `signals` 是白名单，对策略信号与基准名同时生效，因此参与该图的策略信号必须一并列出
+
+两个配置同名 `long_short` 且 `weights` 互不重叠，因此产出的 `long_short_ew.png` 与 `long_short_vw.png` 不会互相覆盖。
 
 数量关系：策略对比图为 `加权方案数` 张，分位图为 `信号数 × 加权方案数` 张。
 

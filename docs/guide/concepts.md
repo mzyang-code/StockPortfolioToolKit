@@ -137,9 +137,12 @@ InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult─�
 |---|---|---|
 | 多信号 | 叠在同一张，按信号分配颜色 | 每路信号单独一张 |
 | 文件名 | `{name}_{weight}.png` | `{name}_{signal}_{weight}.png` |
-| S&P 500 基准 | 画 | 不画 |
 
-判定由 `color_mode` 自动完成：分位图的色阶正是按分位铺开的，再塞进第二路信号既撞色又撞图例。两个行为都可由 `charts[].show_benchmark` 与 `charts[].split_by_signal` 显式覆盖。
+判定由 `color_mode` 自动完成：分位图的色阶正是按分位铺开的，再塞进第二路信号既撞色又撞图例。该行为可由 `charts[].split_by_signal` 显式覆盖。
+
+!!! info "市场基准来自配置，不来自包内"
+
+    包内不附带市场指数数据。基准在 `input.references` 中声明，以 `REF` 桶进入曲线表，再把 `"REF"` 列入该图的 `buckets` 即可上图。线条样式走 `style.reference_color` 与 `style.reference_linestyle`。
 
 ---
 

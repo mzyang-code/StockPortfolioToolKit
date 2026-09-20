@@ -140,17 +140,17 @@ Portfolio Engine 的配置。职责是把标准化后的面板切成分位桶、
 
 ---
 
-## 外部基准
+## 基准
 
 ### include_references
 
 `bool`，默认 `true`。
 
-是否把 `input.references` 中声明的外部基准折算后纳入结果表。基准行的 `bucket` 固定为 `"REF"`，`signal_model` 取基准名，`count` 记 0，并对每个加权方案各复制一行，便于下游统一过滤。
+是否把 `input.references` 中声明的基准折算后纳入结果表。基准行的 `bucket` 固定为 `"REF"`，`signal_model` 取基准名，`count` 记 0，并对每个加权方案各复制一行，便于下游统一过滤。
 
-!!! info "与内置 S&P 500 基准的区别"
+!!! warning "一条 references 会覆盖全部加权方案"
 
-    该字段管的是配置中声明的外部基准序列。包内自带的 S&P 500 曲线由 Visualizer 单独绘制，不受此处影响，也不进入结果表。
+    逐加权方案复制意味着一条基准会同时出现在 EW 与 VW 两套结果中。等权与市值加权各配一条指数时，需在图表层按 `weights` 与 `signals` 分别限定，见[给两套加权各配一条基准](../guide/multi-signal.md#给两套加权各配一条基准)。
 
 ### reference_lag
 

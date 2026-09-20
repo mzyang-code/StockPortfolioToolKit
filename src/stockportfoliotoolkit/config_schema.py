@@ -258,9 +258,6 @@ class ChartSpec:
     show_xlabel: bool = False
     show_ylabel: bool = False
     show_baseline: bool = False  # 基准横线（累计对数收益 0 / 净值 1）默认不画
-    # 包内自带的 S&P 500 基准曲线。留空=按图表类型自动决定（见 wants_benchmark）；
-    # 只能整条开关，不能改样式——颜色/线型硬编码在 benchmark.BENCHMARK_STYLE。
-    show_benchmark: Optional[bool] = None
     # 多信号时是否每路信号单独出一张图。留空=自动（见 wants_split_by_signal）
     split_by_signal: Optional[bool] = None
     # 图例：留空则跟随 style，同样限四个角
@@ -278,13 +275,6 @@ class ChartSpec:
     @property
     def is_decile_view(self) -> bool:
         return str(self.color_mode).lower() == GRADIENT_MODE
-
-    # 基准是拿来比「整条策略」的。分位图在拆解单一策略的内部结构，
-    # 多一条 S&P 500 只会挤占色彩预算，默认不画。
-    def wants_benchmark(self) -> bool:
-        if self.show_benchmark is not None:
-            return bool(self.show_benchmark)
-        return not self.is_decile_view
 
     # 分位图每路信号单独成图：两路信号 × 10 个分位叠在一起没法读。
     # 策略对比图恰恰相反——多路信号必须同图才谈得上比较。

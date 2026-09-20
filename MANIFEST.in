@@ -1,0 +1,6 @@
+# src/stockportfoliotoolkit/data/ 下的 S&P 500 序列受数据使用权限制，不得对外分发。
+#
+# pyproject.toml 的 include-package-data=false 只挡住 wheel；sdist 的文件清单由本文件
+# 决定，默认会把包目录内的全部文件一并打包，因此必须在此显式排除。
+# 两处缺一，构建产物就会重新带上该数据。
+prune src/stockportfoliotoolkit/data

@@ -1,4 +1,12 @@
-# 包内自带的市场基准：S&P 500 日频指数，买入持有后按图表日期轴取样
+# S&P 500 日频指数的买入持有曲线，按给定日期轴取样。
+#
+# 该模块不参与渲染链路：Visualizer 不再自动叠加这条曲线，配置中也没有对应开关。
+# 基准改由 input.references 声明，使用者自备数据。此处代码与 data/ 下的序列一并
+# 保留，供仓库内的示例与 notebook 复现历史结果时调用。
+#
+# data/ 下的序列受数据使用权限制，不随 sdist 与 wheel 分发（见 pyproject.toml），
+# 因此这些函数只在仓库内（或源码安装）可用，在 wheel 安装的环境中会抛
+# FileNotFoundError。
 from __future__ import annotations
 
 from functools import lru_cache
@@ -15,15 +23,16 @@ from .contracts import CUM_LOG_RET, DATE, EQUITY
 #   vw_ret ← CRSP Value-Weighted Portfolios of the S&P 500 Universe  (DlyTotRet)
 # 原始文件保留在仓库 cache/sp500_daily_{ew,vw}.csv.gz 以便复核。
 DATA_FILE = "sp500_daily.csv.gz"
+DATA_DIR = "data"
 
-# 加权方案 → 基准列。图表按加权方案切分，因此 EW 组合对 EW 指数、VW 组合对 VW 指数，
-# 这样比较才是同口径的。未登记的方案退回市值加权——那才是通常说的「S&P 500」。
+# 加权方案 → 基准列。EW 组合对 EW 指数、VW 组合对 VW 指数，这样比较才是同口径的。
+# 未登记的方案退回市值加权——那才是通常说的「S&P 500」。
 _COLUMN_BY_WEIGHT = {"EW": "ew_ret", "VW": "vw_ret"}
 _DEFAULT_COLUMN = "vw_ret"
 _LABEL_BY_COLUMN = {"ew_ret": "S&P 500 EW", "vw_ret": "S&P 500 VW"}
 
-# 基准线样式：硬编码，不接受任何外部配置覆盖。
-# MappingProxyType 让误改在写入处就抛 TypeError，而不是静默生效。
+# 示例里画这条曲线时用的样式。MappingProxyType 让误改在写入处就抛 TypeError，
+# 而不是静默生效。Visualizer 不读取该常量。
 BENCHMARK_STYLE: Mapping[str, object] = MappingProxyType({
     "color": "#000000",
     "linestyle": "-",
@@ -43,12 +52,22 @@ def benchmark_label(weight: Optional[str] = None) -> str:
 
 @lru_cache(maxsize=1)
 def load_sp500_daily() -> pd.DataFrame:
-    """读取包内自带的 S&P 500 日频收益，返回 [date, ew_ret, vw_ret]（升序、无重复）。"""
+    """读取 data/ 下的 S&P 500 日频收益，返回 [date, ew_ret, vw_ret]（升序、无重复）。
+
+    该序列不随 wheel 分发，仅在仓库内或源码安装时存在。缺失时抛 FileNotFoundError。
+    """
     from importlib.resources import files
 
     # 逐级 joinpath：多参数形式要 Python 3.11+，而本包声明支持 3.9
-    resource = files(__package__).joinpath("data").joinpath(DATA_FILE)
-    with resource.open("rb") as fh:
+    resource = files(__package__).joinpath(DATA_DIR).joinpath(DATA_FILE)
+    try:
+        handle = resource.open("rb")
+    except (FileNotFoundError, OSError) as exc:
+        raise FileNotFoundError(
+            f"未找到 {DATA_DIR}/{DATA_FILE}。该序列受数据使用权限制，不随安装包分发，"
+            "只在仓库内或源码安装时可用。基准请改用 input.references 自备数据声明。"
+        ) from exc
+    with handle as fh:
         frame = pd.read_csv(fh, compression="gzip")
     frame[DATE] = pd.to_datetime(frame[DATE])
     for column in _COLUMN_BY_WEIGHT.values():

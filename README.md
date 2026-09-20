@@ -72,12 +72,17 @@ The full documentation is written in Chinese. Direct links:
 | [Math contract](https://mzyang-code.github.io/StockPortfolioToolKit/guide/math/) | The exact formula behind every metric |
 | [Config reference](https://mzyang-code.github.io/StockPortfolioToolKit/reference/config-input/) | Per-field types, defaults and constraints |
 
-## Bundled benchmark
+## Benchmarks
 
-Ships with CRSP S&P 500 Universe daily total returns (dividends included, 1992-01-02 to
-2025-12-31, 8561 trading days), distributed with the wheel and requiring no configuration.
-Equal-weighted portfolios are paired with the equal-weighted index, cap-weighted with the
-cap-weighted index.
+No market index data is bundled. Benchmark series are supplied by the user through
+`input.references`, enter the result table under bucket `REF`, and appear on charts once
+`"REF"` is listed in a chart's `buckets`.
+
+Equal-weighted portfolios should be paired with an equal-weighted index and cap-weighted
+with a cap-weighted index — only like-for-like comparisons mean anything. A single
+`references` entry is replicated across every weighting scheme, so pairing one index per
+scheme takes two entries plus two chart configs constraining `weights` and `signals`. See
+[Multiple signals](https://mzyang-code.github.io/StockPortfolioToolKit/guide/multi-signal/).
 
 ## Building the docs locally
 
