@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import stockportfoliotoolkit as spt
-from stockportfoliotoolkit.config_schema import (
+import alpholio as alp
+from alpholio.config_schema import (
     CalendarSpec,
     ConfigError,
     EngineConfig,
@@ -18,10 +18,10 @@ from stockportfoliotoolkit.config_schema import (
     PriceSpec,
     SignalSpec,
 )
-from stockportfoliotoolkit.contracts import ContractError, InputBundle
-from stockportfoliotoolkit.engine import PortfolioEngine, forward_returns
-from stockportfoliotoolkit.frequency import MONTHLY, month_key, resolve
-from stockportfoliotoolkit.input import InputProcessor
+from alpholio.contracts import ContractError, InputBundle
+from alpholio.engine import PortfolioEngine, forward_returns
+from alpholio.frequency import MONTHLY, month_key, resolve
+from alpholio.input import InputProcessor
 
 from conftest import INTRA_MONTH_CAP_FACTOR, N_ASSETS, monthly_growth
 
@@ -130,7 +130,7 @@ def test_caps_come_from_month_end(midmonth_signals, intramonth_prices):
 # --------------------------------------------------------- 年化因子
 
 def _summary_meta(signals, prices, **kwargs):
-    bt = spt.backtest(
+    bt = alp.backtest(
         signals=signals[["date", "id", "alpha"]], prices=prices,
         horizon=1, frequency=MONTHLY, n_buckets=2, min_names=4, **kwargs
     )
@@ -158,7 +158,7 @@ def test_explicit_periods_per_year_still_wins(monthly_signals, monthly_prices):
 
 def test_daily_annualization_is_unchanged(signals, prices):
     """日频路径逐值不变：仍是 trading_days_per_year / holding_days"""
-    bt = spt.backtest(
+    bt = alp.backtest(
         signals=signals[["date", "id", "alpha"]], prices=prices,
         horizon=5, n_buckets=2, min_names=4,
     )
@@ -306,7 +306,7 @@ def test_backtest_facade_runs_monthly(monthly_signals, monthly_prices):
 
 def test_exported_config_keeps_the_frequency(tmp_path, monthly_signals, monthly_prices):
     """月度口径必须能随配置归档：导出再重跑，指标逐值一致"""
-    from stockportfoliotoolkit.pipeline import run_pipeline
+    from alpholio.pipeline import run_pipeline
 
     original = _summary_meta(monthly_signals, monthly_prices)
     original.to_config(tmp_path / "cfg", data_dir=tmp_path / "data")

@@ -8,15 +8,15 @@ from dataclasses import replace
 import pandas as pd
 import pytest
 
-from stockportfoliotoolkit import run_pipeline, to_legacy_wide
-from stockportfoliotoolkit.config_schema import (
+from alpholio import run_pipeline, to_legacy_wide
+from alpholio.config_schema import (
     ConfigError,
     EngineConfig,
     ForwardReturnSpec,
     HoldingPeriodWarning,
 )
-from stockportfoliotoolkit.contracts import ContractError, InputBundle
-from stockportfoliotoolkit.engine import PortfolioEngine
+from alpholio.contracts import ContractError, InputBundle
+from alpholio.engine import PortfolioEngine
 
 
 def test_unknown_config_key_is_rejected():
@@ -65,7 +65,7 @@ def test_pipeline_can_skip_rendering(config_dir):
 
 # CLI 单独走一条 import 路径，容易在重构时漏改
 def test_cli_runs(config_dir, capsys):
-    from stockportfoliotoolkit.cli import main
+    from alpholio.cli import main
 
     assert main(["run", "--config-dir", str(config_dir)]) == 0
     assert "wrote" in capsys.readouterr().out
@@ -149,8 +149,8 @@ def test_explicit_output_dir_wins(config_dir, tmp_path):
 
 # 单独用 Visualizer 且两者都没有 → 报错说清楚，而不是悄悄写进 CWD
 def test_visualizer_without_any_anchor_is_rejected(config_dir):
-    from stockportfoliotoolkit import Visualizer
-    from stockportfoliotoolkit.config_schema import VisualizerConfig
+    from alpholio import Visualizer
+    from alpholio.config_schema import VisualizerConfig
 
     analysis = run_pipeline(config_dir, render=False).analysis
     with pytest.raises(ContractError, match="output_dir"):

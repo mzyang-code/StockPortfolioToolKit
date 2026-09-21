@@ -15,10 +15,10 @@ class Settings:
 
     ``style`` 是可变对象，直接改字段即可，改动对之后的每次渲染生效：
 
-        spt.settings.style.figsize = (10, 6)
-        spt.settings.style.dpi = 300
-        spt.settings.style.palette = {"MOM": "#1f77b4"}
-        spt.settings.reset()          # 复原到出厂默认
+        alp.settings.style.figsize = (10, 6)
+        alp.settings.style.dpi = 300
+        alp.settings.style.palette = {"MOM": "#1f77b4"}
+        alp.settings.reset()          # 复原到出厂默认
     """
 
     style: StyleSpec

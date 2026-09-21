@@ -16,10 +16,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from stockportfoliotoolkit import io
-from stockportfoliotoolkit.config_schema import VisualizerConfig
-from stockportfoliotoolkit.contracts import BUCKET
-from stockportfoliotoolkit.pipeline import run_pipeline
+from alpholio import io
+from alpholio.config_schema import VisualizerConfig
+from alpholio.contracts import BUCKET
+from alpholio.pipeline import run_pipeline
 
 HERE = Path(__file__).resolve().parent
 

@@ -199,7 +199,7 @@ def backtest(
     ``{名称: 表}`` 给出。列名与契约一致（date / id / alpha）时无需声明映射，
     不一致时用 ``signal_columns`` 等参数指明。
 
-        bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
+        bt = alp.backtest(signals=alpha_df, prices=price_df, horizon=5)
         bt.summary()
         bt.plot("long_short")
 
@@ -209,7 +209,7 @@ def backtest(
     frequency 声明面板的 bar 有多长，取 "daily" 或 "monthly"，horizon /
     rebalance_freq / holding_days 的单位与年化基数都随它：
 
-        bt = spt.backtest(signals=alpha_df, prices=panel_df,
+        bt = alp.backtest(signals=alpha_df, prices=panel_df,
                           horizon=1, frequency="monthly")   # 月度调仓，年化按 12 期
 
     月度口径下前视收益与市值按自然月对齐（月末 close → h 个月后月末 close），
@@ -367,7 +367,7 @@ class BacktestResult:
 
         kind 取 "long_short"（多空腿对比）或 "deciles"（分位内部结构）。
         weight 留空取首个加权方案；多路信号画分位图时用 signal 指定看哪一路。
-        样式关键字直接透传给 ChartSpec，全局样式见 spt.settings.style。
+        样式关键字直接透传给 ChartSpec，全局样式见 alp.settings.style。
         """
         available = self.weights
         if not available:

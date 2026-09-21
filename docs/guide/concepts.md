@@ -20,8 +20,8 @@ InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult─�
 | 产出 | `BacktestResult` 对象 | `PipelineResult` + 落盘文件 |
 
 ```python
-bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)   # 门面
-result = spt.run_pipeline("configs/")                              # 配置目录
+bt = alp.backtest(signals=alpha_df, prices=price_df, horizon=5)   # 门面
+result = alp.run_pipeline("configs/")                              # 配置目录
 ```
 
 `backtest()` 本身不含任何计算：它把扁平参数组装成 `InputConfig` / `EngineConfig` /
@@ -36,7 +36,7 @@ result = spt.run_pipeline("configs/")                              # 配置目�
     又不想写文件的场景：
 
     ```python
-    from stockportfoliotoolkit.config_schema import InputConfig, PriceSpec, SignalSpec
+    from alpholio.config_schema import InputConfig, PriceSpec, SignalSpec
 
     cfg = InputConfig(prices=PriceSpec(frame=price_df),
                       signals=[SignalSpec(name="MOM", frame=alpha_df)])
@@ -207,9 +207,9 @@ bt.save("outputs/")        # 两个预设各出一张
 样式本身不进预设也不进函数签名，集中在全局 `settings`：
 
 ```python
-spt.settings.style.figsize = (10, 6)
-spt.settings.style.palette = {"MOM": "#1f77b4"}
-spt.settings.reset()
+alp.settings.style.figsize = (10, 6)
+alp.settings.style.palette = {"MOM": "#1f77b4"}
+alp.settings.reset()
 ```
 
 配置中显式写了 `style` 时以配置为准，不受全局影响；留空则渲染时取 `settings.style`，
@@ -246,7 +246,7 @@ spt.settings.reset()
 `format`。
 
 ```python
-from stockportfoliotoolkit.engine import WEIGHTERS, Weighter
+from alpholio.engine import WEIGHTERS, Weighter
 
 @WEIGHTERS.register()
 class InverseVolWeighter(Weighter):

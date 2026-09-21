@@ -169,7 +169,7 @@ def daily_reference(business_days) -> pd.DataFrame:
 
 @pytest.fixture
 def bundle(signals, prices, references, trading_days):
-    from stockportfoliotoolkit.contracts import InputBundle
+    from alpholio.contracts import InputBundle
 
     return InputBundle(
         signals=signals,

@@ -3,20 +3,20 @@ hide:
   - toc
 ---
 
-<div class="spt-hero" markdown>
+<div class="alpholio-hero" markdown>
 
-# StockPortfolioToolKit { .spt-hero__title }
+# alpholio { .alpholio-hero__title }
 
 配置驱动的截面投资组合回测工具包。输入端只需提供 alpha，分桶、加权、指标计算与出图由工具包完成。
-{ .spt-hero__tagline }
+{ .alpholio-hero__tagline }
 
-[快速开始](guide/quickstart.md){ .spt-btn .spt-btn--primary }
-[GitHub](https://github.com/mzyang-code/StockPortfolioToolKit){ .spt-btn .spt-btn--ghost }
-{ .spt-hero__actions }
+[快速开始](guide/quickstart.md){ .alpholio-btn .alpholio-btn--primary }
+[GitHub](https://github.com/mzyang-code/alpholio){ .alpholio-btn .alpholio-btn--ghost }
+{ .alpholio-hero__actions }
 
 </div>
 
-<div class="spt-flow" markdown>
+<div class="alpholio-flow" markdown>
 
 ```
 InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult──▶ Analyzer ──AnalysisResult──▶ Visualizer ──▶ PNG / CSV
@@ -32,9 +32,9 @@ InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult─�
 因子与价格表直接传 DataFrame，无需先落盘：
 
 ```python
-import stockportfoliotoolkit as spt
+import alpholio as alp
 
-bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
+bt = alp.backtest(signals=alpha_df, prices=price_df, horizon=5)
 bt.summary(bucket="H-L")       # 多空腿指标
 bt.plot("long_short")          # 净值图，返回 matplotlib Figure
 ```
@@ -42,13 +42,13 @@ bt.plot("long_short")          # 净值图，返回 matplotlib Figure
 月度面板加一个 `frequency`，`horizon` 与调仓间隔随之按自然月计：
 
 ```python
-bt = spt.backtest(signals=alpha_df, prices=panel_df, horizon=1, frequency="monthly")
+bt = alp.backtest(signals=alpha_df, prices=panel_df, horizon=1, frequency="monthly")
 ```
 
 批量执行与复现归档走配置目录，两条路径结果逐值一致：
 
 ```bash
-spt run --config-dir configs/
+alpholio run --config-dir configs/
 ```
 
 ## 从这里开始

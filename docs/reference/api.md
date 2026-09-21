@@ -5,9 +5,9 @@
 [配置目录路径](config-input.md)算出的结果逐值一致。
 
 ```python
-import stockportfoliotoolkit as spt
+import alpholio as alp
 
-bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
+bt = alp.backtest(signals=alpha_df, prices=price_df, horizon=5)
 ```
 
 ## 数据参数
@@ -65,7 +65,7 @@ ContractError: frame<MOM>: 缺少必需列 ['date', 'id']；源列为 ['anchor',
 `horizon`、`rebalance_freq`、`holding_days` 数的是期，一期有多长由 `frequency` 决定：`"daily"` 下是一个交易日，`"monthly"` 下是一个自然月。年化基数随之取 252 或 12。
 
 ```python
-bt = spt.backtest(signals=alpha_df, prices=panel_df, horizon=1, frequency="monthly")
+bt = alp.backtest(signals=alpha_df, prices=panel_df, horizon=1, frequency="monthly")
 ```
 
 月频面板沿用默认的 `"daily"` 会让年化指标偏离 21 倍且不触发告警，详见[数据频率](../guide/frequency.md)。
@@ -175,11 +175,11 @@ fig.savefig("fig3.pdf", dpi=300)
 再把路径写进配置。
 
 ```python
-bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5, n_buckets=10)
+bt = alp.backtest(signals=alpha_df, prices=price_df, horizon=5, n_buckets=10)
 bt.to_config("paper/configs/", data_dir="paper/data/")
 
 # 复现时
-result = spt.run_pipeline("paper/configs/")
+result = alp.run_pipeline("paper/configs/")
 ```
 
 ## 全局样式
@@ -188,12 +188,12 @@ result = spt.run_pipeline("paper/configs/")
 改一次对之后的每次渲染生效：
 
 ```python
-spt.settings.style.figsize = (10, 6)
-spt.settings.style.dpi = 300
-spt.settings.style.palette = {"MOM": "#1f77b4"}
-spt.settings.style.gradient_colormap = "plasma"
+alp.settings.style.figsize = (10, 6)
+alp.settings.style.dpi = 300
+alp.settings.style.palette = {"MOM": "#1f77b4"}
+alp.settings.style.gradient_colormap = "plasma"
 
-spt.settings.reset()            # 复原到出厂默认
+alp.settings.reset()            # 复原到出厂默认
 ```
 
 逐字段说明见 [visualizer.json 的 `style` 段](config-input.md)。配置中显式写了 `style` 时以配置为准，
@@ -204,8 +204,8 @@ spt.settings.reset()            # 复原到出厂默认
 预设覆盖不到的场景，四个模块仍可单独驱动，配置用 Python 直接构造：
 
 ```python
-from stockportfoliotoolkit import InputProcessor, PortfolioEngine
-from stockportfoliotoolkit.config_schema import (
+from alpholio import InputProcessor, PortfolioEngine
+from alpholio.config_schema import (
     InputConfig, PriceSpec, SignalSpec, EngineConfig, ForwardReturnSpec,
 )
 

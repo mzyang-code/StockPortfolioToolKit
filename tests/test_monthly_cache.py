@@ -13,13 +13,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from stockportfoliotoolkit.analyzer import Analyzer
-from stockportfoliotoolkit.config_schema import PipelineConfig
-from stockportfoliotoolkit.engine import PortfolioEngine
-from stockportfoliotoolkit.frequency import DAILY, MONTHLY
-from stockportfoliotoolkit.input import InputProcessor
+from alpholio.analyzer import Analyzer
+from alpholio.config_schema import PipelineConfig
+from alpholio.engine import PortfolioEngine
+from alpholio.frequency import DAILY, MONTHLY
+from alpholio.input import InputProcessor
 
-CACHE = Path(__file__).parent / "cache" / "spt_demo"
+CACHE = Path(__file__).parent / "cache" / "alpholio_demo"
 CONFIGS = CACHE / "configs"
 PANEL = CACHE / "panel.parquet"
 GOLDEN = CACHE / "outputs" / "summary_metrics.csv"

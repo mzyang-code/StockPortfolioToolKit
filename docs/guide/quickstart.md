@@ -19,13 +19,13 @@
 
     ```bash
     conda env create -f environment.yml
-    conda activate stockportfoliotoolkit
+    conda activate alpholio
     pip install -e .
     ```
 
     对应 Python 3.12.2 与全部测试通过的那一组确切版本。
 
-安装后会注册命令行入口 `spt`。
+安装后会注册命令行入口 `alpholio`。
 
 !!! tip "示例与 notebook 中的数据位置是占位符"
 
@@ -34,13 +34,13 @@
 
     | 入口 | 覆盖方式 |
     |---|---|
-    | `quickstart_*.ipynb` | 环境变量 `SPT_PRICES`（价格面板文件）、`SPT_WORK`（产物根目录） |
+    | `quickstart_*.ipynb` | 环境变量 `ALPHOLIO_PRICES`（价格面板文件）、`ALPHOLIO_WORK`（产物根目录） |
     | `examples/*/build_signal.py` | 命令行参数 `--prices`、`--out` |
     | `examples/*/configs/input.json` | 改 `vars` 块中的 `CACHE`、`SIGNALS` |
 
     ```bash
-    export SPT_PRICES=/your/cache/processed/processed_stock_data.feather
-    export SPT_WORK=/your/cache
+    export ALPHOLIO_PRICES=/your/cache/processed/processed_stock_data.feather
+    export ALPHOLIO_WORK=/your/cache
     ```
 
     `examples/*/run.sh` 另有两个变量：`CONDA_ENV` 指定 conda 环境名（默认 `myenv`），
@@ -63,9 +63,9 @@
 因子与价格表直接传 DataFrame，无需先落盘：
 
 ```python
-import stockportfoliotoolkit as spt
+import alpholio as alp
 
-bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
+bt = alp.backtest(signals=alpha_df, prices=price_df, horizon=5)
 
 bt.summary(bucket="H-L")       # 多空腿指标
 bt.plot("long_short")          # 净值图，返回 matplotlib Figure
@@ -89,14 +89,14 @@ bt.save("outputs/")            # 图与表落盘
 多路 alpha 用映射给出，键即信号名：
 
 ```python
-bt = spt.backtest(signals={"MOM": mom_df, "REV": rev_df}, prices=price_df, horizon=5)
+bt = alp.backtest(signals={"MOM": mom_df, "REV": rev_df}, prices=price_df, horizon=5)
 bt.plot("deciles", signal="MOM")
 ```
 
 文件路径与内存表等价，可以混用：
 
 ```python
-bt = spt.backtest(signals="alpha.feather", prices="prices.feather", horizon=5)
+bt = alp.backtest(signals="alpha.feather", prices="prices.feather", horizon=5)
 ```
 
 !!! tip "notebook 里画不出图时"
@@ -182,15 +182,15 @@ ConfigError: engine: 未知配置项 ['n_bucket']；可用项为 ['forward_retur
 === "命令行"
 
     ```bash
-    spt run --config-dir configs/
-    spt run --config-dir configs/ --no-render     # 只算不出图
-    spt run --config-dir configs/ --quiet         # 不打印摘要，仅列出落盘文件
+    alpholio run --config-dir configs/
+    alpholio run --config-dir configs/ --no-render     # 只算不出图
+    alpholio run --config-dir configs/ --quiet         # 不打印摘要，仅列出落盘文件
     ```
 
 === "Python"
 
     ```python
-    from stockportfoliotoolkit import run_pipeline
+    from alpholio import run_pipeline
 
     result = run_pipeline("configs/")
     ```
@@ -198,8 +198,8 @@ ConfigError: engine: 未知配置项 ['n_bucket']；可用项为 ['forward_retur
 各阶段也可以单独驱动，中间产物在模块间以固定契约传递。配置既可以从 JSON 读，也可以用 Python 直接构造：
 
 ```python
-from stockportfoliotoolkit import InputProcessor, PortfolioEngine
-from stockportfoliotoolkit.config_schema import EngineConfig, InputConfig
+from alpholio import InputProcessor, PortfolioEngine
+from alpholio.config_schema import EngineConfig, InputConfig
 
 bundle = InputProcessor(InputConfig.from_file("configs/input.json")).run()
 engine = PortfolioEngine(EngineConfig.from_file("configs/engine.json")).run(bundle)

@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "stockportfoliotoolkit"
+name = "alpholio"
 version = "0.4.0"
 description = "Config-driven cross-sectional portfolio backtesting toolkit"
 readme = "README.md"
@@ -35,11 +35,11 @@ notebook = ["nbclient>=0.10", "nbformat>=5.10", "ipykernel>=6.29"]
 docs = ["mkdocs>=1.6", "mkdocs-material>=9.5", "jieba>=0.42"]
 
 [project.urls]
-Homepage = "https://github.com/mzyang-code/StockPortfolioToolKit"
-Issues = "https://github.com/mzyang-code/StockPortfolioToolKit/issues"
+Homepage = "https://github.com/mzyang-code/alpholio"
+Issues = "https://github.com/mzyang-code/alpholio/issues"
 
 [project.scripts]
-spt = "stockportfoliotoolkit.cli:main"
+alpholio = "alpholio.cli:main"
 
 [tool.setuptools]
 # data/ 下的 S&P 500 序列受数据使用权限制，不得随 sdist 与 wheel 分发。

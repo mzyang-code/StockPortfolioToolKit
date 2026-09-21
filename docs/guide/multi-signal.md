@@ -9,7 +9,7 @@
 键即信号名，值可以是 DataFrame 或文件路径，两者可以混用：
 
 ```python
-bt = spt.backtest(
+bt = alp.backtest(
     signals={"MOM": mom_df, "STR": "signal_str.feather", "WSTR": wstr_df},
     prices=price_df,
     horizon=5,
@@ -42,9 +42,9 @@ bt.signal_names          # ['MOM', 'STR', 'WSTR']
 === "Python API"
 
     ```python
-    from stockportfoliotoolkit.config_schema import SignalSpec
+    from alpholio.config_schema import SignalSpec
 
-    bt = spt.backtest(
+    bt = alp.backtest(
         signals=[
             SignalSpec(name="RAG",  frame=pred_df,
                        column_map={"date": "date", "id": "id", "alpha": "pred_rag"}),
@@ -218,7 +218,7 @@ decile_spread_str_vw.png
 
 ```python
 # 两条基准都声明，先让它们进结果表
-bt = spt.backtest(
+bt = alp.backtest(
     signals={"MOM": mom_df, "STR": str_df}, prices=price_df, horizon=5,
     references={"SPX_EW": spx_ew_df, "SPX_VW": spx_vw_df},
 )

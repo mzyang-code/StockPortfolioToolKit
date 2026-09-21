@@ -1,4 +1,4 @@
-# 命令行入口：spt run --config-dir <目录>
+# 命令行入口：alpholio run --config-dir <目录>
 from __future__ import annotations
 
 import argparse
@@ -11,7 +11,7 @@ from .pipeline import run_pipeline
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(prog="spt", description="截面组合回测工具包")
+    parser = argparse.ArgumentParser(prog="alpholio", description="截面组合回测工具包")
     sub = parser.add_subparsers(dest="command", required=True)
 
     run = sub.add_parser("run", help="按配置目录跑完整流水线")

@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import pytest
 
-from stockportfoliotoolkit.config_schema import InputConfig
-from stockportfoliotoolkit.contracts import ContractError
-from stockportfoliotoolkit.input import InputProcessor
-from stockportfoliotoolkit.io import resolve_path
+from alpholio.config_schema import InputConfig
+from alpholio.contracts import ContractError
+from alpholio.input import InputProcessor
+from alpholio.io import resolve_path
 
 
 def _cfg(config_dir):

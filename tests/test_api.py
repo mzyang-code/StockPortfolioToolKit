@@ -6,16 +6,16 @@ import warnings
 import pandas as pd
 import pytest
 
-import stockportfoliotoolkit as spt
-from stockportfoliotoolkit.config_schema import (
+import alpholio as alp
+from alpholio.config_schema import (
     ConfigError,
     HoldingPeriodWarning,
     SignalSpec,
 )
-from stockportfoliotoolkit.contracts import CAP, CLOSE, ContractError
-from stockportfoliotoolkit.pipeline import run_pipeline
-from stockportfoliotoolkit.presets import chart_preset
-from stockportfoliotoolkit.settings import settings
+from alpholio.contracts import CAP, CLOSE, ContractError
+from alpholio.pipeline import run_pipeline
+from alpholio.presets import chart_preset
+from alpholio.settings import settings
 
 HORIZON = 5
 
@@ -34,7 +34,7 @@ def flat_signals(signals) -> pd.DataFrame:
 
 
 def _run(flat_signals, prices, **kwargs):
-    return spt.backtest(
+    return alp.backtest(
         signals=flat_signals, prices=prices, horizon=HORIZON,
         n_buckets=2, min_names=4, **kwargs
     )

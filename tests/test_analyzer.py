@@ -5,12 +5,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from stockportfoliotoolkit.analyzer import Analyzer, compute_ic, compute_turnover
-from stockportfoliotoolkit.analyzer.curves import build_curves, vol_rescale_to_reference
-from stockportfoliotoolkit.analyzer.metrics import MetricContext, build_metric
-from stockportfoliotoolkit.config_schema import AnalyzerConfig, EngineConfig, ForwardReturnSpec
-from stockportfoliotoolkit.contracts import ContractError
-from stockportfoliotoolkit.engine import PortfolioEngine
+from alpholio.analyzer import Analyzer, compute_ic, compute_turnover
+from alpholio.analyzer.curves import build_curves, vol_rescale_to_reference
+from alpholio.analyzer.metrics import MetricContext, build_metric
+from alpholio.config_schema import AnalyzerConfig, EngineConfig, ForwardReturnSpec
+from alpholio.contracts import ContractError
+from alpholio.engine import PortfolioEngine
 
 CTX = MetricContext(periods_per_year=12.0)
 

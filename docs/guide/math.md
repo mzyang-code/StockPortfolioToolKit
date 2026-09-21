@@ -110,7 +110,7 @@ hit_rate = mean(r > 0)
 严格大于 0 才计入，收益恰为 0 的期记作未命中。该指标不在默认 `metrics` 列表中，需显式给出：
 
 ```python
-spt.backtest(..., metrics=["ann_ret", "ann_vol", "sharpe",
+alp.backtest(..., metrics=["ann_ret", "ann_vol", "sharpe",
                            "max_drawdown", "total_equity", "hit_rate"])
 ```
 

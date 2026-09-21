@@ -1,6 +1,6 @@
 /* 首页 hero 区。颜色一律取 Material 的主题变量，亮色/暗色自动跟随 */
 
-.spt-hero {
+.alpholio-hero {
   margin: -1.6rem -.8rem 2.4rem;
   padding: 3.6rem 1.2rem 3.2rem;
   text-align: center;
@@ -9,13 +9,13 @@
 }
 
 /* slate 方案下 primary 与正文底色过于接近，改用略提亮的表面色并压一条分隔线 */
-[data-md-color-scheme="slate"] .spt-hero {
+[data-md-color-scheme="slate"] .alpholio-hero {
   background: var(--md-code-bg-color);
   color: var(--md-default-fg-color);
   border-bottom: 1px solid var(--md-default-fg-color--lightest);
 }
 
-.md-typeset .spt-hero__title {
+.md-typeset .alpholio-hero__title {
   margin: 0;
   font-size: 2.4rem;
   font-weight: 700;
@@ -25,11 +25,11 @@
 }
 
 /* toc.permalink 会给每级标题挂一个 ¶，在 hero 大标题上是噪声 */
-.md-typeset .spt-hero__title .headerlink {
+.md-typeset .alpholio-hero__title .headerlink {
   display: none;
 }
 
-.md-typeset .spt-hero__tagline {
+.md-typeset .alpholio-hero__tagline {
   max-width: 34rem;
   margin: .9rem auto 0;
   font-size: .82rem;
@@ -37,7 +37,7 @@
   opacity: .82;
 }
 
-.md-typeset .spt-hero__actions {
+.md-typeset .alpholio-hero__actions {
   margin: 2rem 0 0;
   display: flex;
   gap: .7rem;
@@ -45,7 +45,7 @@
   flex-wrap: wrap;
 }
 
-.md-typeset .spt-btn {
+.md-typeset .alpholio-btn {
   display: inline-block;
   padding: .62rem 1.5rem;
   border: 1px solid transparent;
@@ -56,24 +56,24 @@
   transition: background-color .15s, color .15s, border-color .15s;
 }
 
-.md-typeset .spt-btn--primary {
+.md-typeset .alpholio-btn--primary {
   background: var(--md-accent-fg-color);
   border-color: var(--md-accent-fg-color);
   color: var(--md-primary-bg-color);
 }
 
-.md-typeset .spt-btn--primary:hover {
+.md-typeset .alpholio-btn--primary:hover {
   background: transparent;
   color: inherit;
 }
 
-.md-typeset .spt-btn--ghost {
+.md-typeset .alpholio-btn--ghost {
   border-color: currentColor;
   color: inherit;
   opacity: .85;
 }
 
-.md-typeset .spt-btn--ghost:hover {
+.md-typeset .alpholio-btn--ghost:hover {
   background: var(--md-accent-fg-color);
   border-color: var(--md-accent-fg-color);
   color: var(--md-primary-bg-color);
@@ -81,25 +81,25 @@
 }
 
 /* 数据流图：横向可滚动，窄屏不撑破版面 */
-.spt-flow {
+.alpholio-flow {
   overflow-x: auto;
 }
 
-.spt-flow .highlight {
+.alpholio-flow .highlight {
   min-width: 0;
 }
 
 /* 手机宽度 */
 @media screen and (max-width: 44.9375em) {
-  .spt-hero {
+  .alpholio-hero {
     padding: 2.4rem .8rem 2.2rem;
   }
 
-  .md-typeset .spt-hero__title {
+  .md-typeset .alpholio-hero__title {
     font-size: 1.7rem;
   }
 
-  .md-typeset .spt-hero__tagline {
+  .md-typeset .alpholio-hero__tagline {
     font-size: .76rem;
   }
 }

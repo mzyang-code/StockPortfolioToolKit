@@ -7,9 +7,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from stockportfoliotoolkit.config_schema import EngineConfig, ForwardReturnSpec
-from stockportfoliotoolkit.contracts import ContractError, InputBundle
-from stockportfoliotoolkit.engine import (
+from alpholio.config_schema import EngineConfig, ForwardReturnSpec
+from alpholio.contracts import ContractError, InputBundle
+from alpholio.engine import (
     DegeneratePriceWarning,
     IgnoredForwardReturnWarning,
     PortfolioEngine,
@@ -17,7 +17,7 @@ from stockportfoliotoolkit.engine import (
     bucket_returns,
     forward_returns,
 )
-from stockportfoliotoolkit.engine.weighting import (
+from alpholio.engine.weighting import (
     CapWeighter,
     EqualWeighter,
     build_weighter,
@@ -48,7 +48,7 @@ def test_cap_weights_drop_non_positive():
 
 
 def test_logvw_is_no_longer_registered():
-    from stockportfoliotoolkit.engine import WEIGHTERS
+    from alpholio.engine import WEIGHTERS
 
     assert "logvw" not in WEIGHTERS
     assert WEIGHTERS.names() == ["ew", "vw"]

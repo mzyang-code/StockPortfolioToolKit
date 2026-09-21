@@ -7,21 +7,21 @@ import pandas as pd
 import pytest
 from matplotlib.legend import Legend
 
-from stockportfoliotoolkit.benchmark import (
+from alpholio.benchmark import (
     BENCHMARK_STYLE,
     benchmark_curve,
     benchmark_label,
     load_sp500_daily,
 )
-from stockportfoliotoolkit.config_schema import (
+from alpholio.config_schema import (
     ChartSpec,
     ConfigError,
     StyleSpec,
     VisualizerConfig,
 )
-from stockportfoliotoolkit.contracts import bucket_rank, sort_by_bucket
-from stockportfoliotoolkit.visualizer import Palette, build_chart
-from stockportfoliotoolkit.visualizer.charts import TICK_FONTSIZE
+from alpholio.contracts import bucket_rank, sort_by_bucket
+from alpholio.visualizer import Palette, build_chart
+from alpholio.visualizer.charts import TICK_FONTSIZE
 
 BLUE, GREEN = "#1f77b4", "#1a7f37"
 DECILES = [("S", str(i)) for i in range(10)] + [("S", "H-L")]
@@ -241,7 +241,7 @@ def test_summary_sorted_by_weight_then_bucket():
 
 # 净值图已从包里移除，只保留累计对数收益一种线图
 def test_equity_chart_is_no_longer_registered():
-    from stockportfoliotoolkit.visualizer import CHARTS
+    from alpholio.visualizer import CHARTS
 
     assert "equity" not in CHARTS
     assert CHARTS.names() == ["cumulative_log_return"]

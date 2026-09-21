@@ -17,8 +17,8 @@
 内存中的 DataFrame 与磁盘上的文件是对等的输入，两者走同一条处理链路：
 
 ```python
-bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)          # 内存
-bt = spt.backtest(signals="mom.feather", prices="px.feather", horizon=5) # 文件
+bt = alp.backtest(signals=alpha_df, prices=price_df, horizon=5)          # 内存
+bt = alp.backtest(signals="mom.feather", prices="px.feather", horizon=5) # 文件
 ```
 
 文件内置支持 `feather`、`parquet`、`csv` 三种格式，按后缀推断。
@@ -42,7 +42,7 @@ bt = spt.backtest(signals="mom.feather", prices="px.feather", horizon=5) # 文�
 列名已经是这四个时无需任何声明：
 
 ```python
-spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
+alp.backtest(signals=alpha_df, prices=price_df, horizon=5)
 ```
 
 ## 列名不一致时
@@ -52,7 +52,7 @@ spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
 === "Python API"
 
     ```python
-    spt.backtest(
+    alp.backtest(
         signals=pred_df,
         prices=price_df,
         horizon=5,
@@ -111,7 +111,7 @@ graph TD
 
     ```python
     # 信号表有 fwd_ret 列时，这是自动推导的结果，无需声明
-    spt.backtest(signals=pred_df, prices=price_df, horizon=5)
+    alp.backtest(signals=pred_df, prices=price_df, horizon=5)
     ```
 
     ```json
@@ -127,10 +127,10 @@ graph TD
 
     ```python
     # 信号表没有 fwd_ret 列时，这是自动推导的结果
-    spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
+    alp.backtest(signals=alpha_df, prices=price_df, horizon=5)
 
     # 信号表有 fwd_ret 但仍要走价格口径，需显式指定
-    spt.backtest(..., forward_return_source="prices")
+    alp.backtest(..., forward_return_source="prices")
     ```
 
     ```json
@@ -199,7 +199,7 @@ graph TD
 要在自动识别的场景下排除 `close`，显式给出不含它的映射即可：
 
 ```python
-spt.backtest(..., price_columns={"date": "date", "id": "id", "cap": "cap"})
+alp.backtest(..., price_columns={"date": "date", "id": "id", "cap": "cap"})
 ```
 
 ---
@@ -211,7 +211,7 @@ spt.backtest(..., price_columns={"date": "date", "id": "id", "cap": "cap"})
 === "Python API"
 
     ```python
-    spt.backtest(
+    alp.backtest(
         signals=alpha_df, prices=price_df, horizon=5,
         references={"SPX": spx_df},          # 或 {"SPX": "spx_daily.csv"}
         reference_frequency="daily",

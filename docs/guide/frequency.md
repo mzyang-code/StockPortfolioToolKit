@@ -7,7 +7,7 @@
 === "Python API"
 
     ```python
-    bt = spt.backtest(signals=alpha_df, prices=panel_df, horizon=1, frequency="monthly")
+    bt = alp.backtest(signals=alpha_df, prices=panel_df, horizon=1, frequency="monthly")
     ```
 
 === "JSON 配置"
@@ -68,7 +68,7 @@
 一行 = 一个资产一个自然月，日期通常是月末。日历原样保留，`rebalance_freq=1` 即每月调仓：
 
 ```python
-bt = spt.backtest(
+bt = alp.backtest(
     signals={"RAG": panel, "ACM": panel},
     prices=panel,
     horizon=1,
@@ -83,7 +83,7 @@ bt = spt.backtest(
 价格面板逐日，信号按月给出。日历自动落到每月最后一个可用日期，前视收益与市值都取月末值：
 
 ```python
-bt = spt.backtest(signals=monthly_alpha, prices=daily_prices, horizon=1, frequency="monthly")
+bt = alp.backtest(signals=monthly_alpha, prices=daily_prices, horizon=1, frequency="monthly")
 ```
 
 信号落在月内哪一天（月末、月初、或每月第三个交易日）不影响取数——锚点保持在信号自己的日期上，而收益与市值按其所属自然月对齐。`rebalance_freq` 此时数的仍是月，不需要换算成 21 个交易日。

@@ -7,7 +7,7 @@ Visualizer 把 `AnalysisResult` 渲染成 PNG 与 CSV，并返回落盘文件清
 交互式分析时产物不必先写到磁盘。`BacktestResult` 保留了每一层的中间产物：
 
 ```python
-bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
+bt = alp.backtest(signals=alpha_df, prices=price_df, horizon=5)
 
 bt.summary()        # 指标表
 bt.returns          # 逐期组合收益长表
@@ -34,7 +34,7 @@ bt.aligned          # alpha × 前视收益 × 市值 的对齐面板
 
 ```python
 bt.save("outputs/")                              # 显式给出
-bt = spt.backtest(..., output_dir="outputs/")    # 或在回测时就定好
+bt = alp.backtest(..., output_dir="outputs/")    # 或在回测时就定好
 ```
 
 ```
@@ -183,7 +183,7 @@ bt.save("outputs/", charts=["long_short"], tables=["summary"])
 === "backtest()"
 
     ```python
-    bt = spt.backtest(signals=alpha_df, prices=price_df, horizon=5)
+    bt = alp.backtest(signals=alpha_df, prices=price_df, horizon=5)
     ```
 
     | 字段 | 内容 |
@@ -197,7 +197,7 @@ bt.save("outputs/", charts=["long_short"], tables=["summary"])
 === "run_pipeline()"
 
     ```python
-    result = spt.run_pipeline("configs/", render=False)    # 只算不出图
+    result = alp.run_pipeline("configs/", render=False)    # 只算不出图
     ```
 
     | 字段 | 类型 | 内容 |
@@ -228,7 +228,7 @@ returns[(returns["bucket"] == "H-L") & (returns["weight"] == "EW")]
 若下游代码需要 `anchor_date` / `decile` / `ew_ret` / `vw_ret` 这类宽表列名：
 
 ```python
-from stockportfoliotoolkit import to_legacy_wide
+from alpholio import to_legacy_wide
 
 wide = to_legacy_wide(result.engine.returns)
 ```
@@ -243,7 +243,7 @@ wide = to_legacy_wide(result.engine.returns)
 
 ```python
 bt.to_config("paper/configs/", data_dir="paper/data/")
-result = spt.run_pipeline("paper/configs/")        # 复现
+result = alp.run_pipeline("paper/configs/")        # 复现
 ```
 
 内存 DataFrame 写不进 JSON，因此内存输入时需给出 `data_dir`：表先落盘到该目录，再把路径写进
@@ -256,7 +256,7 @@ result = spt.run_pipeline("paper/configs/")        # 复现
 ## 命令行的输出
 
 ```bash
-spt run --config-dir configs/
+alpholio run --config-dir configs/
 ```
 
 默认打印输入摘要（JSON）与 headline 指标（只含 `H-L` 与 `REF` 行），然后逐行列出落盘文件：

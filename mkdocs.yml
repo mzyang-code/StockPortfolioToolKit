@@ -1,10 +1,10 @@
-site_name: StockPortfolioToolKit
+site_name: alpholio
 site_description: 配置驱动的截面投资组合回测工具包
 site_author: myang682
-site_url: https://mzyang-code.github.io/StockPortfolioToolKit/
+site_url: https://mzyang-code.github.io/alpholio/
 
-repo_url: https://github.com/mzyang-code/StockPortfolioToolKit
-repo_name: mzyang-code/StockPortfolioToolKit
+repo_url: https://github.com/mzyang-code/alpholio
+repo_name: mzyang-code/alpholio
 edit_uri: edit/main/docs/
 
 copyright: MIT License
