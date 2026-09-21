@@ -21,7 +21,7 @@ pip install -e ".[notebook]"          # 追加跑 quickstart_*.ipynb 的依赖
 pip install -e ".[docs]"              # 追加构建文档站的依赖
 ```
 
-复现经过验证的那一组确切版本（Python 3.12.2 + 全部 117 个测试通过）：
+复现经过验证的那一组确切版本（Python 3.12.2 + 全部 148 个测试通过）：
 
 ```bash
 conda env create -f environment.yml
