@@ -33,14 +33,10 @@ import pandas as pd
 import pyarrow.feather as feather
 
 # ===== 默认参数（与 configs/*.json 保持同步） =====
-PRICES_PATH = (
-    "/mnt/df7c3e41-975f-4e19-950b-bf2143e9dd82/MingzhiYang/stock_rag_cache"
-    "/processed/processed_stock_data.feather"
-)
-OUT_PATH = (
-    "/mnt/df7c3e41-975f-4e19-950b-bf2143e9dd82/MingzhiYang/portfolio_tool_cache"
-    "/signals/signal_wstr.feather"
-)
+# 两个路径是占位符，需与 configs/input.json 的 vars.CACHE / vars.SIGNALS 指向同一位置。
+# 也可在命令行用 --prices / --out 覆盖，无需改动本文件。
+PRICES_PATH = "/path/to/stock_rag_cache/processed/processed_stock_data.feather"
+OUT_PATH = "/path/to/portfolio_tool_cache/signals/signal_wstr.feather"
 FIRST_REBALANCE = "2021-01-04"
 STRIDE = 5           # 调仓间隔（交易日），信号只在调仓日落盘
 HOLDING_DAYS = 5     # 前视收益持有期，必须等于 engine.json 的 holding_days

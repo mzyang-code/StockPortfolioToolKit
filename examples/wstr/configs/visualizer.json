@@ -1,7 +1,4 @@
 {
-  "vars": {
-    "ROOT": "/home/MZYang_tmp/portfolio_tool"
-  },
   "export_returns": true,
   "charts": [
     {

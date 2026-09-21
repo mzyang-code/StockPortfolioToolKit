@@ -24,7 +24,7 @@ pip install -e ".[notebook]"          # adds what quickstart_*.ipynb needs
 pip install -e ".[docs]"              # adds the documentation site toolchain
 ```
 
-To reproduce the exact verified combination (Python 3.12.2, all 85 tests passing):
+To reproduce the exact verified combination (Python 3.12.2, all 117 tests passing):
 
 ```bash
 conda env create -f environment.yml

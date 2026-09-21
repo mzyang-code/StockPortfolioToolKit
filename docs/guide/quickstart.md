@@ -27,6 +27,25 @@
 
 安装后会注册命令行入口 `spt`。
 
+!!! tip "示例与 notebook 中的数据位置是占位符"
+
+    仓库不含任何本机绝对路径，示例里的数据位置一律写作 `/path/to/...`，运行前需指向实际位置。
+    三处入口各有自己的覆盖方式：
+
+    | 入口 | 覆盖方式 |
+    |---|---|
+    | `quickstart_*.ipynb` | 环境变量 `SPT_PRICES`（价格面板文件）、`SPT_WORK`（产物根目录） |
+    | `examples/*/build_signal.py` | 命令行参数 `--prices`、`--out` |
+    | `examples/*/configs/input.json` | 改 `vars` 块中的 `CACHE`、`SIGNALS` |
+
+    ```bash
+    export SPT_PRICES=/your/cache/processed/processed_stock_data.feather
+    export SPT_WORK=/your/cache
+    ```
+
+    `examples/*/run.sh` 另有两个变量：`CONDA_ENV` 指定 conda 环境名（默认 `myenv`），
+    `CONDA_SH` 在 `conda` 不位于 `PATH` 时指向 `<conda 安装目录>/etc/profile.d/conda.sh`。
+
 ## 准备数据
 
 包内没有任何硬编码路径与列名。三类输入，各自的必需列：

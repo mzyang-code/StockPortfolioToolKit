@@ -13,9 +13,16 @@ LOG_DIR="$HERE/logs"
 LOG="$LOG_DIR/run_str.log"
 mkdir -p "$LOG_DIR"
 
-# 全程严格在 myenv 中执行
-source /home/MZYang_tmp/anaconda3/etc/profile.d/conda.sh
-conda activate myenv
+# 全程严格在指定 conda 环境中执行。环境名取 CONDA_ENV，默认 myenv。
+# conda.sh 的位置随安装方式而变，按 conda 自身所在的 base 目录推断；
+# conda 不在 PATH 中时（如某些 cron / nohup 环境），用 CONDA_SH 显式指定。
+CONDA_SH="${CONDA_SH:-$(conda info --base 2>/dev/null)/etc/profile.d/conda.sh}"
+if [ ! -f "$CONDA_SH" ]; then
+  echo "找不到 conda.sh，请设置 CONDA_SH=<conda 安装目录>/etc/profile.d/conda.sh" >&2
+  exit 1
+fi
+source "$CONDA_SH"
+conda activate "${CONDA_ENV:-myenv}"
 
 {
   echo "==== $(date '+%F %T') STR 开始 | python=$(which python) ===="
