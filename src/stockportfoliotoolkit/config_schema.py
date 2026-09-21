@@ -9,6 +9,8 @@ from typing import Any, Dict, List, Mapping, Optional, Type, TypeVar
 
 import pandas as pd
 
+from .frequency import FREQUENCIES
+
 T = TypeVar("T")
 
 
@@ -120,6 +122,7 @@ class ReferenceSpec:
 class CalendarSpec:
     first_rebalance: Optional[str] = None
     last_rebalance: Optional[str] = None
+    # 调仓间隔，单位随 input.frequency：日度为交易日，月度为自然月
     rebalance_freq: int = 5
     source: str = "signals"  # signals | prices
     auto_stride: bool = True  # 信号日历原生已够稀疏时不再二次抽稀
@@ -131,7 +134,19 @@ class InputConfig:
     signals: List[SignalSpec] = _nested(SignalSpec, many=True, default_factory=list)
     references: List[ReferenceSpec] = _nested(ReferenceSpec, many=True, default_factory=list)
     calendar: CalendarSpec = _nested(CalendarSpec, default_factory=CalendarSpec)
+    # 面板的 bar 有多长：daily=一行一个交易日, monthly=一行一个自然月。
+    # 全包只此一处声明，下游四件事都以它为准——日历抽稀单位、前视收益测量方式、
+    # 日频基准的复利窗口、年化基数。
+    frequency: str = "daily"
     vars: Dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        key = str(self.frequency).lower()
+        if key not in FREQUENCIES:
+            raise ConfigError(
+                f"input.frequency 只能取 {sorted(FREQUENCIES)}，得到 {self.frequency!r}"
+            )
+        self.frequency = key
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "InputConfig":
@@ -156,8 +171,8 @@ class HoldingPeriodWarning(UserWarning):
 
 @dataclass
 class ForwardReturnSpec:
-    # 前视收益的测量期长度，单位为交易日。必填：它定义了每期实现收益跨越多长的窗口，
-    # 也是全包唯一一处「一期有多长」的事实来源。
+    # 前视收益的测量期长度，单位随 input.frequency（日度=交易日，月度=自然月）。必填：
+    # 它定义了每期实现收益跨越多长的窗口，也是全包唯一一处「一期有多长」的事实来源。
     horizon: Optional[int] = None
     source: str = "prices"  # prices=close 前视收益, signals=信号文件自带列
     clip_lower: Optional[float] = None
@@ -167,6 +182,7 @@ class ForwardReturnSpec:
 class EngineConfig:
     n_buckets: int = 10
     min_names: int = 20
+    # 年化折算所用的持有期数，单位随 input.frequency（日度=交易日，月度=自然月）。
     # 留空即继承 forward_return.horizon；显式给出且不等时告警但不中断
     holding_days: Optional[int] = None
     weights: List[str] = field(default_factory=lambda: ["ew", "vw"])
@@ -183,8 +199,9 @@ class EngineConfig:
         spec = self.forward_return
         if spec is None or spec.horizon is None:
             raise ConfigError(
-                "engine.forward_return.horizon 为必填项：请写明前视收益的测量期长度"
-                "（交易日）。holding_days 未单独指定时即继承该值。"
+                "engine.forward_return.horizon 为必填项：请写明前视收益的测量期长度，"
+                "单位随 input.frequency（日度=交易日，月度=自然月）。"
+                "holding_days 未单独指定时即继承该值。"
             )
         horizon = int(spec.horizon)
         if horizon < 1:
@@ -201,8 +218,10 @@ class EngineConfig:
             warnings.warn(
                 f"engine.holding_days={self.holding_days} 与 "
                 f"engine.forward_return.horizon={horizon} 不一致："
-                f"每期实现收益按 {horizon} 个交易日测量（基准同窗口口径），"
-                f"而年化因子按每年 252/{self.holding_days} 期折算。"
+                f"每期实现收益按 {horizon} 期测量（基准同窗口口径），"
+                f"而年化因子按每年「年化基数/{self.holding_days}」期折算"
+                f"（基数随 input.frequency：日度取 analyzer.trading_days_per_year，"
+                f"默认 252；月度取 12）。"
                 f"两者不等意味着组合收益的测量期与声称的持有期不是同一件事，"
                 f"年化收益/波动/夏普会相应偏移；确属有意为之可忽略本条。",
                 HoldingPeriodWarning,

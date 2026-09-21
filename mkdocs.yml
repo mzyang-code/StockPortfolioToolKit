@@ -96,6 +96,7 @@ nav:
       - 快速开始: guide/quickstart.md
       - 核心概念: guide/concepts.md
       - 准备输入数据: guide/prepare-data.md
+      - 数据频率: guide/frequency.md
       - 多信号: guide/multi-signal.md
       - 产物与落盘: guide/outputs.md
       - 数学口径: guide/math.md

@@ -50,10 +50,17 @@ bt.returns                     # per-period portfolio returns, long format
 bt.curves                      # equity and cumulative log-return curves
 ```
 
-`horizon` is the measurement window of each period's realised return, in trading days,
-and is required. Column mapping is inferred when the source names already match the
-contract (`date` / `id` / `alpha`); the rebalance interval defaults to `horizon`; and
-value weighting is added automatically when the price table carries a `cap` column.
+`horizon` is the measurement window of each period's realised return and is required.
+Column mapping is inferred when the source names already match the contract
+(`date` / `id` / `alpha`); the rebalance interval defaults to `horizon`; and value
+weighting is added automatically when the price table carries a `cap` column.
+
+Monthly panels only need a `frequency`: `horizon` and the rebalance interval then count
+calendar months, and metrics annualise at 12 periods per year.
+
+```python
+bt = spt.backtest(signals=alpha_df, prices=panel_df, horizon=1, frequency="monthly")
+```
 
 File paths work interchangeably with in-memory tables:
 
@@ -91,6 +98,7 @@ The full documentation is written in Chinese. Direct links:
 | [Quick start](https://mzyang-code.github.io/StockPortfolioToolKit/guide/quickstart/) | Install through the first equity curve |
 | [Concepts](https://mzyang-code.github.io/StockPortfolioToolKit/guide/concepts/) | Four modules, three data contracts, extension points |
 | [Preparing input](https://mzyang-code.github.io/StockPortfolioToolKit/guide/prepare-data/) | Signal table format, column mapping, forward-return sources |
+| [Data frequency](https://mzyang-code.github.io/StockPortfolioToolKit/guide/frequency/) | Daily vs monthly: units, alignment rules, annualisation base |
 | [Multiple signals](https://mzyang-code.github.io/StockPortfolioToolKit/guide/multi-signal/) | Running several alphas at once, and how charts split |
 | [Outputs](https://mzyang-code.github.io/StockPortfolioToolKit/guide/outputs/) | File listing, naming rules, long-table structure |
 | [Math contract](https://mzyang-code.github.io/StockPortfolioToolKit/guide/math/) | The exact formula behind every metric |

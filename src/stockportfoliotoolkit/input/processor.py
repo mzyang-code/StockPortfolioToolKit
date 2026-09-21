@@ -8,6 +8,7 @@ import pandas as pd
 
 from ..config_schema import InputConfig
 from ..contracts import ASSET, DATE, NAME, SIGNAL, ContractError, InputBundle
+from ..frequency import Frequency, month_key, resolve
 from .sources import build_alpha_source, build_price_source, build_reference_source
 
 
@@ -20,21 +21,27 @@ class InputProcessor:
     # 唯一出口
     def run(self) -> InputBundle:
         cfg = self.cfg
+        freq = resolve(cfg.frequency)
         signals = self._load_signals()
         first, last = _bounds(cfg.calendar, signals)
         prices = self._load_prices(signals, first)
         base = signals if str(cfg.calendar.source).lower() == "signals" else prices
         trading_days = pd.DatetimeIndex(sorted(pd.unique(prices[DATE])))
-        calendar, stride_info = _build_calendar(base, first, last, cfg.calendar, trading_days)
+        calendar, stride_info = _build_calendar(
+            base, first, last, cfg.calendar, trading_days, freq
+        )
         references = self._load_references()
         meta = self._describe(signals, prices, references, calendar)
         meta["calendar"].update(stride_info)
+        meta["calendar"]["frequency"] = freq.name
+        meta["calendar"]["unit"] = freq.unit
         return InputBundle(
             signals=signals,
             prices=prices,
             calendar=calendar,
             references=references,
             meta=meta,
+            frequency=freq.name,
         )
 
     def _load_signals(self) -> pd.DataFrame:
@@ -118,18 +125,22 @@ def _bounds(calendar_cfg, signals: pd.DataFrame):
     return first, last
 
 
-# 按 freq 抽稀，起点是首个 >= first_rebalance 的日期；
-# auto_stride 下若信号日历原生间隔已 >= freq 则不再抽稀（否则周期数会被再砍 freq 倍）
+# 按 rebalance_freq 抽稀，起点是首个 >= first_rebalance 的日期；
+# auto_stride 下若日历原生间隔已 >= rebalance_freq 则不再抽稀（否则周期数会被再砍一倍）。
+#
+# 月频先把候选日期压成「每个自然月的最后一个」——月度调仓认的是月份而不是某个具体日期，
+# 日频面板配月度口径时由这一步把日历落到月末，之后的抽稀步长单位即为自然月。
 def _build_calendar(
     base: pd.DataFrame,
     first: Optional[pd.Timestamp],
     last: Optional[pd.Timestamp],
     cfg,
     trading_days: pd.DatetimeIndex,
+    frequency: Frequency,
 ):
-    freq = int(cfg.rebalance_freq)
-    if freq < 1:
-        raise ContractError(f"calendar.rebalance_freq 必须 >= 1，得到 {freq}")
+    stride = int(cfg.rebalance_freq)
+    if stride < 1:
+        raise ContractError(f"calendar.rebalance_freq 必须 >= 1，得到 {stride}")
     dates = pd.DatetimeIndex(sorted(pd.unique(base[DATE].dropna())))
     if first is not None:
         dates = dates[dates >= first]
@@ -138,9 +149,26 @@ def _build_calendar(
     if len(dates) == 0:
         raise ContractError("调仓日历为空：检查 first_rebalance/last_rebalance 与数据区间是否重叠")
 
-    native = _native_stride(dates, trading_days)
-    step = 1 if (cfg.auto_stride and native >= freq) else freq
+    if frequency.is_monthly:
+        dates = _month_ends(dates)
+        native = _month_stride(dates)
+    else:
+        native = _native_stride(dates, trading_days)
+    step = 1 if (cfg.auto_stride and native >= stride) else stride
     return dates[::step], {"native_stride": native, "applied_stride": step}
+
+
+# 每个自然月里日期最靠后的那一个。dates 已升序，段尾即月末
+def _month_ends(dates: pd.DatetimeIndex) -> pd.DatetimeIndex:
+    keys = month_key(dates)
+    return dates[np.append(keys[1:] != keys[:-1], True)]
+
+
+# 相邻调仓日相隔几个自然月（中位数）
+def _month_stride(dates: pd.DatetimeIndex) -> int:
+    if len(dates) < 2:
+        return 1
+    return max(1, int(np.median(np.diff(month_key(dates)))))
 
 
 # 信号日期在交易日历上的相邻位置差（中位数），单位为交易日

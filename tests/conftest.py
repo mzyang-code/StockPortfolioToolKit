@@ -58,6 +58,115 @@ def references(trading_days) -> pd.DataFrame:
     })
 
 
+# ============================ 月频夹具 ============================
+# 两年整、每月一期。月末口径可解析：第 i 只股票每月固定涨 1%×(i+1)，
+# 因此 h 个自然月的前视收益恰为 (1 + 0.01(i+1))^h − 1。
+
+N_MONTHS = 24
+MONTHLY_FIRST = "2019-01-01"
+MONTHLY_LAST = "2020-12-31"
+# 月内非月末交易日的偏离幅度。取数若没落在月末，价格与市值都会明显对不上，
+# 「按自然月对齐」因此是可证伪的，而不是恰好相等。
+INTRA_MONTH_CLOSE_LIFT = 1.05
+INTRA_MONTH_CAP_FACTOR = 10.0
+
+
+def monthly_growth(i: int) -> float:
+    return 1.0 + 0.01 * (i + 1)
+
+
+@pytest.fixture
+def business_days() -> pd.DatetimeIndex:
+    return pd.bdate_range(MONTHLY_FIRST, MONTHLY_LAST)
+
+
+@pytest.fixture
+def month_ends(business_days) -> pd.DatetimeIndex:
+    grouped = pd.Series(business_days).groupby(business_days.to_period("M")).max()
+    return pd.DatetimeIndex(grouped.to_numpy())
+
+
+# 每月第三个交易日：调仓锚点落在月内、而非月末的形态
+@pytest.fixture
+def month_thirds(business_days) -> pd.DatetimeIndex:
+    grouped = pd.Series(business_days).groupby(business_days.to_period("M")).nth(2)
+    return pd.DatetimeIndex(grouped.to_numpy())
+
+
+# 纯月频面板：一行 = 一个资产一个自然月
+@pytest.fixture
+def monthly_prices(month_ends) -> pd.DataFrame:
+    steps = np.arange(len(month_ends))
+    return pd.concat([
+        pd.DataFrame({
+            "date": month_ends,
+            "id": f"A{i}",
+            "close": 100.0 * monthly_growth(i) ** steps,
+            "cap": float(10 ** (i + 1)),
+        })
+        for i in range(N_ASSETS)
+    ], ignore_index=True)
+
+
+# 日频面板，月末的 close 与 cap 与 monthly_prices 逐值相同，月内其余交易日刻意错开
+@pytest.fixture
+def intramonth_prices(business_days, month_ends) -> pd.DataFrame:
+    order = {period: k for k, period in enumerate(sorted(set(business_days.to_period("M"))))}
+    month_of_day = np.array([order[p] for p in business_days.to_period("M")])
+    at_month_end = business_days.isin(month_ends)
+    frames = []
+    for i in range(N_ASSETS):
+        close = 100.0 * monthly_growth(i) ** month_of_day
+        cap = float(10 ** (i + 1))
+        frames.append(pd.DataFrame({
+            "date": business_days,
+            "id": f"A{i}",
+            "close": np.where(at_month_end, close, close * INTRA_MONTH_CLOSE_LIFT),
+            "cap": np.where(at_month_end, cap, cap * INTRA_MONTH_CAP_FACTOR),
+        }))
+    return pd.concat(frames, ignore_index=True)
+
+
+# alpha 与资产序号同序，逐期不变：分桶与多空腿因此完全可预测
+def _alpha_panel(dates: pd.DatetimeIndex) -> pd.DataFrame:
+    return pd.concat([
+        pd.DataFrame({
+            "date": dates,
+            "id": f"A{i}",
+            "signal_model": "SYN",
+            "alpha": float(i),
+        })
+        for i in range(N_ASSETS)
+    ], ignore_index=True)
+
+
+@pytest.fixture
+def monthly_signals(month_ends) -> pd.DataFrame:
+    return _alpha_panel(month_ends)
+
+
+# 信号每个交易日都有：月度口径须自行把日历落到月末
+@pytest.fixture
+def daily_signals_over_months(business_days) -> pd.DataFrame:
+    return _alpha_panel(business_days)
+
+
+# 信号只在月内第三个交易日落盘：锚点与价格面板的月末不是同一天
+@pytest.fixture
+def midmonth_signals(month_thirds) -> pd.DataFrame:
+    return _alpha_panel(month_thirds)
+
+
+@pytest.fixture
+def daily_reference(business_days) -> pd.DataFrame:
+    return pd.DataFrame({
+        "date": business_days,
+        "name": "BENCH",
+        "ret": 0.002,
+        "frequency": "daily",
+    })
+
+
 @pytest.fixture
 def bundle(signals, prices, references, trading_days):
     from stockportfoliotoolkit.contracts import InputBundle

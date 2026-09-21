@@ -47,7 +47,13 @@ bt.returns                     # 逐期组合收益长表
 bt.curves                      # 净值与累计对数收益曲线
 ```
 
-`horizon` 是每期实现收益的测量期长度（交易日），必填。列名与契约一致（`date` / `id` / `alpha`）时无需声明映射；调仓间隔缺省等于 `horizon`；价格表含 `cap` 列时自动加上市值加权。
+`horizon` 是每期实现收益的测量期长度，必填。列名与契约一致（`date` / `id` / `alpha`）时无需声明映射；调仓间隔缺省等于 `horizon`；价格表含 `cap` 列时自动加上市值加权。
+
+月度面板加一个 `frequency` 即可，`horizon` / 调仓间隔随之按自然月计，年化按每年 12 期折算：
+
+```python
+bt = spt.backtest(signals=alpha_df, prices=panel_df, horizon=1, frequency="monthly")
+```
 
 文件路径与内存表等价，两者可混用：
 
@@ -81,6 +87,7 @@ bt.to_config("paper/configs/", data_dir="paper/data/")
 | [快速开始](https://mzyang-code.github.io/StockPortfolioToolKit/guide/quickstart/) | 从安装到跑出第一张净值曲线 |
 | [核心概念](https://mzyang-code.github.io/StockPortfolioToolKit/guide/concepts/) | 四个模块、三份数据契约与扩展点 |
 | [准备输入数据](https://mzyang-code.github.io/StockPortfolioToolKit/guide/prepare-data/) | 信号表格式、列映射与两种前视收益口径 |
+| [数据频率](https://mzyang-code.github.io/StockPortfolioToolKit/guide/frequency/) | 日度与月度口径的单位、取数规则与年化基数 |
 | [多信号](https://mzyang-code.github.io/StockPortfolioToolKit/guide/multi-signal/) | 一次跑多路 alpha，以及图表如何拆分 |
 | [产物与落盘](https://mzyang-code.github.io/StockPortfolioToolKit/guide/outputs/) | 文件清单、命名规则与长表结构 |
 | [数学口径](https://mzyang-code.github.io/StockPortfolioToolKit/guide/math/) | 每个指标的确切算法与失真条件 |

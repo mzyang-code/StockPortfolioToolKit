@@ -28,6 +28,8 @@ fwd_ret[t] = close[t + h] / close[t] - 1
 
 `engine.forward_return.horizon` 是全包唯一一处定义「一期有多长」的地方，为必填项。三处同时以它为准：前视收益的测量窗口、日频基准的复利窗口、`holding_days` 未给出时的继承值。
 
+它的**单位**则由 `input.frequency` 决定：日度口径下数交易日，月度口径下数自然月。月度口径的 `close` 取各月最后一个可用收盘价，因此上式中的 `t` 与 `t + h` 指的是两个月份的月末，而不是面板上相隔 h 行的两条记录。详见[数据频率](frequency.md)。
+
 `engine.holding_days` 仅用于年化折算，不改变任何一期收益的测量方式。两者显式不等时发出 `HoldingPeriodWarning`。
 
 !!! warning "调仓间隔应与测量期相等"
@@ -48,9 +50,11 @@ fwd_ret[t] = close[t + h] / close[t] - 1
 ### 年化因子
 
 ```
-P = analyzer.periods_per_year                       # 显式给出时直接采用
-P = trading_days_per_year / engine.holding_days     # 否则由此推导，默认 252 / holding_days
+P = analyzer.periods_per_year        # 显式给出时直接采用
+P = 年化基数 / engine.holding_days    # 否则由此推导
 ```
+
+年化基数随 `input.frequency`：日度口径取 `analyzer.trading_days_per_year`（默认 252），月度口径取 12。月频面板沿用默认的日度口径会让 `P` 偏离 21 倍，且不触发告警，见[数据频率](frequency.md)。
 
 ### ann_ret —— 年化收益
 
@@ -207,5 +211,7 @@ wᵢ = capᵢ / Σcap
 基准一律由使用者声明（配置中的 `input.references`，`backtest()` 的 `references=` 参数），包内不附带市场指数数据，也不存在绕过声明直接绘制的基准曲线。
 
 `frequency="daily"` 的序列在 `[锚点 + reference_lag, 锚点 + reference_lag + horizon)` 窗口上复利，窗口长度取 `horizon` 而非 `holding_days`——基准与组合必须测同一个窗口才可比。`frequency="period"` 的序列已是周期收益，直接按调仓日历对齐。
+
+月度口径（`input.frequency="monthly"`）下窗口末端改取目标自然月的月末，`reference_lag=1` 时为 `(锚点, 末端]`、`=0` 时为 `[锚点, 末端)`；`period` 序列按自然月对齐。逐日加 h 个月会把目标月最后一两天漏在窗口外，而组合那一期测的是月末到月末。
 
 因此基准与组合走同一套周期化口径：`rebalance_freq` 与 `horizon` 不等时，基准同样受重叠持有期或空仓缺口影响，不是一条独立于调仓节奏的买入持有曲线。

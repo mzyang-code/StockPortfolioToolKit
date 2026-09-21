@@ -163,7 +163,7 @@ SignalSpec(name="MOM", frame=alpha_df)               # 内存
 每年期数按以下优先级确定：
 
 1. `analyzer.periods_per_year` 显式给出时直接采用
-2. 否则由 `trading_days_per_year / engine.holding_days` 推导（默认 `252 / holding_days`）
+2. 否则由 `年化基数 / engine.holding_days` 推导；基数随 `input.frequency`，日度取 `trading_days_per_year`（默认 252），月度取 12
 
 ### AnalysisResult
 

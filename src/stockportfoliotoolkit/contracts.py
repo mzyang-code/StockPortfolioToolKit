@@ -84,6 +84,9 @@ class InputBundle:
     calendar: pd.DatetimeIndex
     references: Optional[pd.DataFrame] = None
     meta: Dict[str, Any] = field(default_factory=dict)
+    # 面板的 bar 有多长，取值见 frequency.FREQUENCIES。下游据此决定前视收益的测量方式、
+    # 基准复利窗口与年化基数；手工构造 InputBundle 时不声明即按日频处理。
+    frequency: str = "daily"
 
     def __post_init__(self) -> None:
         require_columns(self.signals, SIGNAL_COLUMNS, "InputBundle.signals")
@@ -92,6 +95,10 @@ class InputBundle:
             require_columns(self.references, REFERENCE_COLUMNS, "InputBundle.references")
         if len(self.calendar) == 0:
             raise ContractError("InputBundle.calendar: 调仓日历为空")
+        # frequency 模块要用 ContractError，在函数内 import 避免模块级循环引用
+        from .frequency import resolve
+
+        resolve(self.frequency)
 
     @property
     def signal_names(self) -> list:

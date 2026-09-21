@@ -39,6 +39,12 @@ bt.summary(bucket="H-L")       # 多空腿指标
 bt.plot("long_short")          # 净值图，返回 matplotlib Figure
 ```
 
+月度面板加一个 `frequency`，`horizon` 与调仓间隔随之按自然月计：
+
+```python
+bt = spt.backtest(signals=alpha_df, prices=panel_df, horizon=1, frequency="monthly")
+```
+
 批量执行与复现归档走配置目录，两条路径结果逐值一致：
 
 ```bash
@@ -105,6 +111,8 @@ MOM / STR / WSTR 这类价格因子在本包中属于普通输入，与任何外
 !!! note "`forward_return.horizon` 是唯一的「一期有多长」"
 
     `engine.holding_days` 留空即继承该值。两者显式不等时告警但不中断，因为那意味着收益的测量期与年化时假定的持有期不是同一件事。
+
+    一期的**单位**则由 `input.frequency` 单独声明：日度数交易日、月度数自然月，年化基数随之取 252 或 12。月频面板漏声明会让年化指标偏离 21 倍且不告警，见[数据频率](guide/frequency.md)。
 
 !!! warning "调仓间隔应与测量期相等"
 

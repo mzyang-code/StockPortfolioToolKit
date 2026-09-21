@@ -158,6 +158,7 @@ def backtest(
     prices,
     *,
     horizon: int,
+    frequency: str = "daily",
     rebalance_freq: Optional[int] = None,
     n_buckets: int = 10,
     min_names: int = 20,
@@ -202,8 +203,17 @@ def backtest(
         bt.summary()
         bt.plot("long_short")
 
-    horizon 是每期实现收益的测量期长度（交易日），必填——它定义了「一期有多长」，
-    全包只此一处事实来源。rebalance_freq 留空即取同值，使相邻持有窗口首尾相接。
+    horizon 是每期实现收益的测量期长度，必填——它定义了「一期有多长」，全包只此一处
+    事实来源。rebalance_freq 留空即取同值，使相邻持有窗口首尾相接。
+
+    frequency 声明面板的 bar 有多长，取 "daily" 或 "monthly"，horizon /
+    rebalance_freq / holding_days 的单位与年化基数都随它：
+
+        bt = spt.backtest(signals=alpha_df, prices=panel_df,
+                          horizon=1, frequency="monthly")   # 月度调仓，年化按 12 期
+
+    月度口径下前视收益与市值按自然月对齐（月末 close → h 个月后月末 close），
+    因此日频价格面板配月末调仓也能直接跑。
     """
     variables = dict(vars or {})
     signal_specs = _signal_specs(signals, signal_columns, variables)
@@ -231,6 +241,7 @@ def backtest(
                 source=calendar_source,
                 auto_stride=auto_stride,
             ),
+            frequency=frequency,
             vars=variables,
         ),
         engine=EngineConfig(

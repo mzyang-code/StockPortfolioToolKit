@@ -9,12 +9,12 @@ Portfolio Engine 的配置。职责是把标准化后的面板切成分位桶、
 
 | 字段 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `forward_return.horizon` | `int` | **必填** | 前视收益的测量期长度，单位交易日 |
+| `forward_return.horizon` | `int` | **必填** | 前视收益的测量期长度，单位随 `input.frequency` |
 | `forward_return.source` | `str` | `"prices"` | 前视收益来源，取 `prices` 或 `signals` |
 | `forward_return.clip_lower` | `float \| null` | `null` | 前视收益的下限裁剪阈值 |
 | `n_buckets` | `int` | `10` | 分位桶数量，必须 ≥ 2 |
 | `min_names` | `int` | `20` | 单个截面进入分桶所需的最少有效样本数 |
-| `holding_days` | `int \| null` | `null` | 年化折算所用的持有期，留空继承 `horizon` |
+| `holding_days` | `int \| null` | `null` | 年化折算所用的持有期数，留空继承 `horizon` |
 | `weights` | `list[str]` | `["ew", "vw"]` | 加权方案名，取自 `WEIGHTERS` 注册表 |
 | `weight_options` | `dict` | `{}` | 按方案名传给加权器构造函数的额外参数 |
 | `include_references` | `bool` | `true` | 是否将外部基准纳入结果表 |
@@ -35,9 +35,9 @@ Portfolio Engine 的配置。职责是把标准化后的面板切成分位桶、
 
 :material-alert-circle: **必填**，`int`，需 ≥ 1。
 
-每期实现收益跨越的交易日数。三处行为同时以它为准：
+每期实现收益跨越的期数。**单位随 [`input.frequency`](config-input.md#frequency)**：日度口径下数交易日，月度口径下数自然月。三处行为同时以它为准：
 
-- 取价格口径时，逐资产计算 `close[t+h] / close[t] - 1`
+- 取价格口径时，逐资产计算 `close[t+h] / close[t] - 1`（月度口径下 `t` 与 `t+h` 取各自月份的最后一个可用收盘价）
 - 日频外部基准在长度为 `h` 的窗口上复利，与组合同窗口才可比
 - `holding_days` 未单独指定时继承该值
 
@@ -166,29 +166,46 @@ Portfolio Engine 的配置。职责是把标准化后的面板切成分位桶、
 
 `int`，默认 `1`。
 
-日频基准的复利窗口相对锚点的偏移。窗口取 `[锚点 + lag, 锚点 + lag + horizon)`：
+日频基准的复利窗口相对锚点的偏移。
 
-- `1`：次日起算，与持仓建立的时点对齐
-- `0`：当日起算
+=== "日度口径"
 
-窗口长度取 `horizon` 而非 `holding_days`，因为基准与组合必须测同一个窗口才可比。窗口内数据不足 `horizon` 天的锚点被跳过。
+    窗口取 `[锚点 + lag, 锚点 + lag + horizon)`，即 `horizon` 个交易日：
 
-`frequency` 为 `period` 的基准已是周期收益，直接按调仓日历对齐，不受该字段影响。
+    - `1`：次日起算，与持仓建立的时点对齐
+    - `0`：当日起算
+
+    窗口内数据不足 `horizon` 天的锚点被跳过。
+
+=== "月度口径"
+
+    窗口末端取「锚点所在月 + `horizon` 个月」的**自然月末**，而不是「锚点日期 + `horizon` 个月」那一天：
+
+    - `1`：`(锚点, 末端]`，次日起算
+    - `0`：`[锚点, 末端)`，当日起算
+
+    锚点通常落在月内最后一个交易日（如 3 月 29 日），逐日加一个月会得到 4 月 29 日，把 4 月最后一两天的行情漏在窗口外；而组合那一期测的是 3 月末收盘到 4 月末收盘。取自然月末才是同一个窗口。
+
+    该口径下只区分「含锚点当日」与「次日起算」两种情形，取值须为 `0` 或 `1`；其他取值抛 `ContractError`，不会被悄悄当成 `1` 处理。基准数据未覆盖到窗口末端的锚点被跳过——月末恰为周末时，末期基准会因此缺一期。
+
+窗口长度取 `horizon` 而非 `holding_days`，因为基准与组合必须测同一个窗口才可比。
+
+`references[].frequency` 为 `period` 的基准已是周期收益，直接按调仓日历对齐，不受该字段影响。
 
 ---
 
 ## holding_days
 
-`int | null`，默认 `null`，留空即继承 `forward_return.horizon`。
+`int | null`，默认 `null`，留空即继承 `forward_return.horizon`。单位与 `horizon` 相同，随 `input.frequency` 变（日度=交易日，月度=自然月）——名字里的 days 是历史沿用，月度口径下它数的是月。
 
-仅用于年化折算：每年期数按 `252 / holding_days` 计。它不改变任何一期实现收益的测量方式——那由 `horizon` 单独决定。
+仅用于年化折算：每年期数按 `年化基数 / holding_days` 计，基数在日度口径下取 `analyzer.trading_days_per_year`（默认 252），月度口径下取 12。它不改变任何一期实现收益的测量方式——那由 `horizon` 单独决定。
 
 显式给出且与 `horizon` 不等时发出 `HoldingPeriodWarning`，可算但不中断：
 
 ```
 engine.holding_days=10 与 engine.forward_return.horizon=5 不一致：
-每期实现收益按 5 个交易日测量（基准同窗口口径），
-而年化因子按每年 252/10 期折算。
+每期实现收益按 5 期测量（基准同窗口口径），
+而年化因子按每年「年化基数/10」期折算。
 ```
 
 两者不等意味着组合收益的测量期与声称的持有期不是同一件事，年化收益、波动与夏普会相应偏移。

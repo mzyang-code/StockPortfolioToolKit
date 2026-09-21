@@ -21,6 +21,7 @@ from ..contracts import (
     EngineResult,
     sort_by_bucket,
 )
+from ..frequency import DAILY, resolve
 from .curves import build_curves, shared_origin, vol_rescale_to_reference
 from .diagnostics import compute_ic, compute_turnover
 from .metrics import MetricContext, build_metric
@@ -66,7 +67,11 @@ class Analyzer:
                 "metrics": [m.name for m in self.metrics],
                 "vol_rescaled": bool(cfg.vol_rescale.enabled),
                 "vol_rescale_reference": cfg.vol_rescale.reference if cfg.vol_rescale.enabled else None,
-                **{k: result.meta[k] for k in ("holding_days", "n_buckets") if k in result.meta},
+                **{
+                    k: result.meta[k]
+                    for k in ("frequency", "holding_days", "n_buckets")
+                    if k in result.meta
+                },
             },
         )
 
@@ -81,12 +86,20 @@ class Analyzer:
             )
         return vol_rescale_to_reference(returns, spec.reference, spec.min_periods)
 
-    # 年化因子：显式配置优先，否则由交易日数 / 持有期推导
+    # 年化因子：显式配置优先，否则由「年化基数 / 持有期」推导。
+    # 基数随面板频率：日频取 analyzer.trading_days_per_year（默认 252），月频取 12。
+    # 频率沿 InputBundle → EngineResult.meta 传来，缺省按日频处理。
     def _periods_per_year(self, engine_meta: Dict) -> float:
         if self.cfg.periods_per_year:
             return float(self.cfg.periods_per_year)
+        frequency = resolve(engine_meta.get("frequency", DAILY))
+        base = (
+            frequency.bars_per_year
+            if frequency.is_monthly
+            else float(self.cfg.trading_days_per_year)
+        )
         holding = int(engine_meta.get("holding_days", 1))
-        return float(self.cfg.trading_days_per_year) / max(holding, 1)
+        return base / max(holding, 1)
 
     def _summarize(
         self, returns: pd.DataFrame, ctx: MetricContext, turnover: pd.DataFrame, ic: pd.DataFrame

@@ -42,14 +42,15 @@ ContractError: frame<MOM>: 缺少必需列 ['date', 'id']；源列为 ['anchor',
 
 | 参数 | 类型 | 默认 | 说明 |
 |---|---|---|---|
-| `horizon` | int | **必填** | 每期实现收益的测量期长度（交易日） |
-| `rebalance_freq` | int | 取 `horizon` | 调仓间隔（交易日） |
+| `horizon` | int | **必填** | 每期实现收益的测量期长度，单位随 `frequency` |
+| `frequency` | str | `"daily"` | 面板频率，取 `"daily"` 或 `"monthly"` |
+| `rebalance_freq` | int | 取 `horizon` | 调仓间隔，单位随 `frequency` |
 | `n_buckets` | int | `10` | 分位桶数 |
 | `min_names` | int | `20` | 单期通过分桶所需的最少标的数 |
 | `weights` | str / list | 按数据决定 | 加权方案，取 `"ew"` / `"vw"` |
 | `long_short` | bool | `True` | 是否构建多空腿 |
 | `long_short_reverse` | bool | `False` | 反向，即低分位减高分位 |
-| `holding_days` | int | 取 `horizon` | 年化折算用的持有期 |
+| `holding_days` | int | 取 `horizon` | 年化折算用的持有期数，单位随 `frequency` |
 | `forward_return_source` | str | 按数据决定 | `"prices"` 或 `"signals"` |
 | `clip_lower` | float | `None` | 前视收益下限截断 |
 | `first_rebalance` | str | `None` | 首个调仓日，留空取信号起点 |
@@ -58,6 +59,16 @@ ContractError: frame<MOM>: 缺少必需列 ['date', 'id']；源列为 ['anchor',
 | `auto_stride` | bool | `True` | 信号日历原生已够稀疏时不再二次抽稀 |
 | `reference_frequency` | str | `"daily"` | 基准序列频率，`daily` 按持有期复利 |
 | `reference_lag` | int | `1` | 日频基准复利起点相对锚点的偏移 |
+
+### frequency 决定所有期数的单位
+
+`horizon`、`rebalance_freq`、`holding_days` 数的是期，一期有多长由 `frequency` 决定：`"daily"` 下是一个交易日，`"monthly"` 下是一个自然月。年化基数随之取 252 或 12。
+
+```python
+bt = spt.backtest(signals=alpha_df, prices=panel_df, horizon=1, frequency="monthly")
+```
+
+月频面板沿用默认的 `"daily"` 会让年化指标偏离 21 倍且不触发告警，详见[数据频率](../guide/frequency.md)。
 
 ### 三处按数据推导的默认值
 
@@ -84,7 +95,7 @@ ContractError: frame<MOM>: 缺少必需列 ['date', 'id']；源列为 ['anchor',
 |---|---|---|---|
 | `metrics` | list | 五项基础指标 | 指标清单，可选项见[数学口径](../guide/math.md) |
 | `periods_per_year` | float | 由持有期推导 | 年化因子，显式给出则优先 |
-| `trading_days_per_year` | float | `252.0` | 年化因子的分子 |
+| `trading_days_per_year` | float | `252.0` | 日度口径下年化因子的分子；月度口径固定取 12 |
 | `risk_free_rate` | float | `0.0` | 无风险利率 |
 | `turnover` | bool | `True` | 是否计算换手 |
 | `ic` | bool | `True` | 是否计算信息系数 |

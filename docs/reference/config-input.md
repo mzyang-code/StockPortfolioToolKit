@@ -30,9 +30,10 @@ Input Processor 的配置。职责是取数、把源列名映射成包内统一�
 | `references[].read_kwargs` | `dict` | `{}` | 透传给底层读取函数 |
 | `calendar.first_rebalance` | `str \| null` | `null` | 首个调仓日，留空取信号最早日期 |
 | `calendar.last_rebalance` | `str \| null` | `null` | 末个调仓日，留空不截断 |
-| `calendar.rebalance_freq` | `int` | `5` | 调仓间隔，单位交易日 |
+| `calendar.rebalance_freq` | `int` | `5` | 调仓间隔，单位随 `frequency` |
 | `calendar.source` | `str` | `"signals"` | 日历基准表，取 `signals` 或 `prices` |
 | `calendar.auto_stride` | `bool` | `true` | 原生间隔已够稀疏时不再二次抽稀 |
+| `frequency` | `str` | `"daily"` | 面板频率，取 `daily` 或 `monthly` |
 | `vars` | `dict` | `{}` | 路径变量定义 |
 
 ---
@@ -240,7 +241,7 @@ alpha 信号源列表，**至少一项**，为空时抛 `ContractError`。每项
 
 ### rebalance_freq
 
-`int`，默认 `5`，必须 ≥ 1。调仓间隔，单位为交易日。
+`int`，默认 `5`，必须 ≥ 1。调仓间隔，单位随 `frequency`：日度口径下为交易日，月度口径下为自然月。
 
 !!! warning "应与 `engine.forward_return.horizon` 相等"
 
@@ -252,9 +253,42 @@ alpha 信号源列表，**至少一项**，为空时抛 `ContractError`。每项
 
 信号若只在调仓日落盘，其日期序列的原生间隔可能已经等于或大于 `rebalance_freq`。此时再按 `freq` 抽稀会把周期数又砍掉一倍。
 
-打开该开关后，原生间隔不小于 `rebalance_freq` 时不再二次抽稀。原生间隔定义为相邻日期在交易日历上位置差的中位数。
+打开该开关后，原生间隔不小于 `rebalance_freq` 时不再二次抽稀。原生间隔的定义随 `frequency`：日度口径取相邻日期在交易日历上位置差的中位数，月度口径取相邻调仓日相隔的自然月数的中位数。
 
 实际采用的步长与探测到的原生间隔记录在 `bundle.meta["calendar"]` 的 `applied_stride` 与 `native_stride` 中，可用于核对。
+
+---
+
+## frequency
+
+`str`，默认 `"daily"`，只能取 `daily` 或 `monthly`，其他取值抛 `ConfigError`。
+
+声明面板的一行代表多长的一段时间。全包只此一处声明，四件事同时以它为准：
+
+| 受影响的项 | `daily` | `monthly` |
+|---|---|---|
+| `calendar.rebalance_freq` 的单位 | 交易日 | 自然月 |
+| `engine.forward_return.horizon`、`engine.holding_days` 的单位 | 交易日 | 自然月 |
+| 日频基准的复利窗口 | `horizon` 个交易日 | `horizon` 个自然月 |
+| 年化基数（`analyzer.periods_per_year` 留空时） | `analyzer.trading_days_per_year`，默认 252 | 12 |
+
+!!! warning "月频面板不声明会让年化偏离 21 倍"
+
+    月频面板若沿用默认的 `daily`，`horizon=1` 会被当成 1 个交易日，年化因子推导出 `252 / 1`，而实际应为 `12 / 1`。`ann_ret`、`ann_vol`、`sharpe` 随之整体放大，且不触发任何告警——`total_equity` 与 `max_drawdown` 由逐期累乘得出，不受年化因子影响，因此也不会露出破绽。
+
+    此前只能靠手写 `analyzer.periods_per_year: 12` 规避。声明 `frequency` 后该字段不再必需，两种写法结果逐值相同。
+
+月度口径下，取数一律按自然月对齐：
+
+- 调仓日取每个自然月内最后一个可用日期
+- 前视收益取「锚点所在月最后一个可用 `close` → `horizon` 个自然月后该月最后一个可用 `close`」，目标月缺失时该期为 `NaN`，不会顺延到再下一个有数据的月份
+- 市值取锚点所在月最后一个可用 `cap`
+
+因此日频价格面板配月度调仓可直接跑：信号落在月内哪一天、价格面板的月末是哪一天，两者不必是同一天。详见[数据频率](../guide/frequency.md)。
+
+!!! note "与 `references[].frequency` 不是同一件事"
+
+    此处说的是整份面板的一行有多长；`references[].frequency` 说的是某条基准序列是日频观测（`daily`，需复利）还是已折算好的周期收益（`period`，直接对齐）。两者取值范围不同，互不影响。
 
 ---
 
@@ -294,7 +328,8 @@ alpha 信号源列表，**至少一项**，为空时抛 `ContractError`。每项
     "rebalance_freq": 5,
     "source": "signals",
     "auto_stride": true
-  }
+  },
+  "frequency": "daily"
 }
 ```
 
@@ -308,4 +343,5 @@ Input Processor 的唯一出口是 `InputBundle`：
 | `prices` | `date`、`id`、`close`、`cap` | 未映射的列整列为 NaN |
 | `calendar` | — | `DatetimeIndex` |
 | `references` | `date`、`name`、`ret`、`frequency` | 无外部基准时为 `None` |
+| `frequency` | — | 面板频率，下游据此决定单位与年化基数 |
 | `meta` | — | 各信号的行数、资产数、区间、日历覆盖与源文件缺失率 |

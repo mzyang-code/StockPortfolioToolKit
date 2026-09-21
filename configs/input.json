@@ -31,5 +31,6 @@
     "rebalance_freq": 5,
     "source": "signals",
     "auto_stride": true
-  }
+  },
+  "frequency": "daily"
 }
