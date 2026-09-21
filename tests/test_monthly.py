@@ -228,6 +228,28 @@ def test_reference_lag_zero_includes_the_anchor_day(
     assert series.loc[month_ends[0]] == pytest.approx(1.002 ** window - 1.0)
 
 
+def test_reference_window_starts_at_the_anchor_month_end(
+    midmonth_signals, intramonth_prices, daily_reference, business_days, month_ends
+):
+    """锚点落在月内时，基准窗口仍是一个自然月——从锚点所在月的月末起算。
+
+    从锚点当天起算会把当月剩下的行情多算进来，一期变成近两个月，而组合那一期测的是
+    月末收盘到月末收盘。"""
+    bundle = _bundle(midmonth_signals, intramonth_prices)
+    bundle = InputBundle(
+        signals=bundle.signals, prices=bundle.prices, calendar=bundle.calendar,
+        references=daily_reference, meta=bundle.meta, frequency=MONTHLY,
+    )
+    series = _reference_returns(bundle)
+    anchor = bundle.calendar[0]  # 1 月内第三个交易日
+    window = int(((business_days > month_ends[0]) & (business_days <= month_ends[1])).sum())
+    assert series.loc[anchor] == pytest.approx(1.002 ** window - 1.0)
+    # 逐期反解窗口长度：每期恰好是下一个自然月的全部交易日，不随锚点在月内的位置漂移
+    lengths = np.log1p(series.to_numpy()) / np.log(1.002)
+    per_month = pd.Series(1, index=business_days).groupby(business_days.to_period("M")).sum()
+    assert lengths == pytest.approx(per_month.to_numpy()[1: len(lengths) + 1])
+
+
 def test_reference_lag_beyond_one_is_rejected(monthly_signals, monthly_prices, daily_reference):
     """自然月窗口没有「第 2 个交易日开始」这回事，不静默当成 1 处理"""
     bundle = _bundle_with_reference(monthly_signals, monthly_prices, daily_reference)

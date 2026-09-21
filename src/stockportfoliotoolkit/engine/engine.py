@@ -162,8 +162,8 @@ def _calendar_stride(bundle: InputBundle, frequency) -> Optional[int]:
 
 # 日频基准复利成持有期收益。窗口口径随面板频率：
 #   日频：[锚点+lag, 锚点+lag+horizon) 共 horizon 个交易日
-#   月频：窗口末端取「锚点所在月 + horizon 个月」的月末，lag>=1 时 (锚点, 末端]，
-#         lag=0 时 [锚点, 末端)
+#   月频：两端都取自然月末——起点是锚点所在月的月末，末端是其后第 horizon 个月的月末；
+#         lag>=1 时 (起点, 末端]，lag=0 时 [起点, 末端)
 # 两种口径下窗口数据不足都跳过该锚点，不产出截断窗口算出的收益。
 def _compound(
     reference: pd.DataFrame,
@@ -189,18 +189,21 @@ def _compound(
     return pd.DataFrame(rows, columns=[DATE, RET])
 
 
-# 月频窗口按自然月边界切，不按基准序列的行数：基准的交易日历与面板未必一致，
-# 数行数会让窗口逐月漂移。
+# 月频窗口按自然月边界切，不按基准序列的行数，也不按锚点当天：
 #
-# 末端取目标月的月末而不是「锚点 + h 个月」那一天：锚点通常落在月内最后一个交易日
-# （如 3 月 29 日），加一个月得到 4 月 29 日，会把 4 月最后一两天的行情漏在窗口外，
-# 而组合那一期测的是 3 月末收盘 → 4 月末收盘。两者必须是同一个窗口才可比。
+# 组合那一期测的是「锚点所在月的月末 → 目标月的月末」（月度口径下 close 与 cap 都取
+# 月末值），基准必须测同一段才可比。因此窗口两端都落在自然月末：
+#   - 起点取锚点所在月的月末。锚点落在月内（信号在月中落盘）时，从锚点当天起算会把
+#     当月剩下大半个月的行情多算进来，一期变成近两个月。
+#   - 末端取目标月的月末。锚点多落在月内最后一个交易日（如 3 月 29 日），逐日加一个月
+#     得到 4 月 29 日，会把 4 月最后一两天漏在窗口外。
+# 锚点本就是月末时两端与逐日推算一致，这两条只在其余情形下起作用。
 def _compound_monthly(
     reference: pd.DataFrame, calendar: pd.DatetimeIndex, h: int, lag: int
 ) -> pd.DataFrame:
     if lag not in (0, 1):
         raise ContractError(
-            f"月度口径下 engine.reference_lag 只能取 0（含锚点当日）或 1（从次日起），"
+            f"月度口径下 engine.reference_lag 只能取 0（含月末当日）或 1（从次日起），"
             f"得到 {lag}：自然月窗口里没有「第 {lag} 个交易日开始」这回事。"
         )
     dates = reference[DATE].to_numpy()
@@ -208,14 +211,16 @@ def _compound_monthly(
     if len(dates) == 0:
         return pd.DataFrame(columns=[DATE, RET])
     side = "right" if lag else "left"
+    month_end = pd.offsets.MonthEnd(0)
     rows = []
     for anchor in calendar:
-        end = (anchor + pd.DateOffset(months=h) + pd.offsets.MonthEnd(0)).to_datetime64()
+        start = (anchor + month_end).to_datetime64()
+        end = (anchor + pd.DateOffset(months=h) + month_end).to_datetime64()
         # 数据没覆盖到窗口末端就跳过。月末恰为周末时末期基准会因此缺一期——
         # 这比把半个月的收益当成整月报出来要好
         if end > dates[-1]:
             continue
-        lo = int(np.searchsorted(dates, anchor.to_datetime64(), side=side))
+        lo = int(np.searchsorted(dates, start, side=side))
         hi = int(np.searchsorted(dates, end, side=side))
         window = rets[lo:hi]
         if len(window) == 0:

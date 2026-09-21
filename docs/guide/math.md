@@ -212,6 +212,6 @@ wᵢ = capᵢ / Σcap
 
 `frequency="daily"` 的序列在 `[锚点 + reference_lag, 锚点 + reference_lag + horizon)` 窗口上复利，窗口长度取 `horizon` 而非 `holding_days`——基准与组合必须测同一个窗口才可比。`frequency="period"` 的序列已是周期收益，直接按调仓日历对齐。
 
-月度口径（`input.frequency="monthly"`）下窗口末端改取目标自然月的月末，`reference_lag=1` 时为 `(锚点, 末端]`、`=0` 时为 `[锚点, 末端)`；`period` 序列按自然月对齐。逐日加 h 个月会把目标月最后一两天漏在窗口外，而组合那一期测的是月末到月末。
+月度口径（`input.frequency="monthly"`）下窗口两端都取自然月末——起点为锚点所在月的月末，末端为其后第 `horizon` 个月的月末，`reference_lag=1` 时为 `(起点, 末端]`、`=0` 时为 `[起点, 末端)`；`period` 序列按自然月对齐。组合那一期测的是月末收盘到月末收盘，逐日推算会在两端各错一截。
 
 因此基准与组合走同一套周期化口径：`rebalance_freq` 与 `horizon` 不等时，基准同样受重叠持有期或空仓缺口影响，不是一条独立于调仓节奏的买入持有曲线。
