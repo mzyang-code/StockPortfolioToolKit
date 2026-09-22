@@ -8,6 +8,10 @@ dist/
 .venv/
 venv/
 
+# 受数据使用权限制的序列，既不进仓库也不进构建产物。
+# 构建侧的排除在 pyproject.toml 与 MANIFEST.in，三处共同保证它不外流。
+src/alpholio/data/
+
 # 运行产物与缓存（均可由代码重新生成）
 outputs/
 logs/
