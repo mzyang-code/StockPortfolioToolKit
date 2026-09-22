@@ -39,7 +39,7 @@ result = alp.run_pipeline("configs/")                              # 配置目�
     from alpholio.config_schema import InputConfig, PriceSpec, SignalSpec
 
     cfg = InputConfig(prices=PriceSpec(frame=price_df),
-                      signals=[SignalSpec(name="MOM", frame=alpha_df)])
+                      signals=[SignalSpec(name="alpha1", frame=alpha_df)])
     bundle = InputProcessor(cfg).run()
     ```
 
@@ -74,8 +74,8 @@ result = alp.run_pipeline("configs/")                              # 配置目�
 之后的列映射、dtype 归一与缺失统计完全一致。文件内置支持 `feather`、`parquet`、`csv` 三种格式。
 
 ```python
-SignalSpec(name="MOM", path="${DATA}/mom.feather")   # 文件
-SignalSpec(name="MOM", frame=alpha_df)               # 内存
+SignalSpec(name="alpha1", path="${DATA}/alpha1.feather")   # 文件
+SignalSpec(name="alpha1", frame=alpha_df)                  # 内存
 ```
 
 `path` 与 `frame` 恰好给一个：两个都给无从判断以哪个为准，都不给则没有数据来源。
@@ -208,7 +208,7 @@ bt.save("outputs/")        # 两个预设各出一张
 
 ```python
 alp.settings.style.figsize = (10, 6)
-alp.settings.style.palette = {"MOM": "#1f77b4"}
+alp.settings.style.palette = {"alpha1": "#1f77b4"}
 alp.settings.reset()
 ```
 
@@ -238,7 +238,7 @@ alp.settings.reset()
 |---|---|---|---|
 | `ALPHA_SOURCES` / `PRICE_SOURCES` / `REFERENCE_SOURCES` | `AlphaSource` 等 | `format` | `feather`、`parquet`、`csv`、`frame` |
 | `WEIGHTERS` | `Weighter` | `engine.weights` / `weights=` | `ew`、`vw` |
-| `METRICS` | `Metric` | `analyzer.metrics` / `metrics=` | `ann_ret`、`ann_vol`、`sharpe`、`max_drawdown`、`total_equity`、`hit_rate` |
+| `METRICS` | `Metric` | `analyzer.metrics` / `metrics=` | `ann_ret`、`cagr`、`ann_vol`、`sharpe`、`max_drawdown`、`total_equity` |
 | `CHARTS` | `Chart` | `charts[].type` | `cumulative_log_return` |
 | `TABLES` | `Table` | `tables[].type` | `summary`、`ic`、`turnover` |
 

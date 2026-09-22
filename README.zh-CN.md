@@ -10,7 +10,7 @@
 InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult──▶ Analyzer ──AnalysisResult──▶ Visualizer ──▶ PNG / CSV
 ```
 
-本包只消费 alpha，不生成任何信号。MOM / STR / WSTR 这类价格因子属于普通输入，与任何外部 alpha 同等对待，一个完整的例子见[日频：MOM 12-2 动量](https://mzyang-code.github.io/alpholio/examples/daily-mom/)。
+本包只消费 alpha，不生成任何信号。月频与日频两个完整例子见[快速开始](https://mzyang-code.github.io/alpholio/guide/quickstart/)。
 
 ## 安装
 
@@ -88,15 +88,10 @@ bt.to_config("paper/configs/", data_dir="paper/data/")
 
 | 页面 | 内容 |
 |---|---|
-| [快速开始](https://mzyang-code.github.io/alpholio/guide/quickstart/) | 从安装到跑出第一张净值曲线 |
+| [快速开始](https://mzyang-code.github.io/alpholio/guide/quickstart/) | 安装、月频与日频两个完整例子，以及包能产出的全部图表 |
 | [核心概念](https://mzyang-code.github.io/alpholio/guide/concepts/) | 四个模块、三份数据契约与扩展点 |
-| [准备输入数据](https://mzyang-code.github.io/alpholio/guide/prepare-data/) | 信号表格式、列映射与两种前视收益口径 |
-| [数据频率](https://mzyang-code.github.io/alpholio/guide/frequency/) | 日度与月度口径的单位、取数规则与年化基数 |
-| [多信号](https://mzyang-code.github.io/alpholio/guide/multi-signal/) | 一次跑多路 alpha，以及图表如何拆分 |
 | [产物与落盘](https://mzyang-code.github.io/alpholio/guide/outputs/) | 文件清单、命名规则与长表结构 |
-| [数学口径](https://mzyang-code.github.io/alpholio/guide/math/) | 每个指标的确切算法与失真条件 |
-| [日频示例](https://mzyang-code.github.io/alpholio/examples/daily-mom/) | MOM 12-2 全流程：输入形态、调用方式与实测结果 |
-| [月频示例](https://mzyang-code.github.io/alpholio/examples/monthly-panel/) | 一张月频面板跑三路 alpha，`frequency="monthly"` |
+| [数学口径](https://mzyang-code.github.io/alpholio/guide/math/) | 每个指标的确切公式与失真条件 |
 | [Python API](https://mzyang-code.github.io/alpholio/reference/api/) | `backtest()` 逐参数说明与结果对象 |
 | [配置参考](https://mzyang-code.github.io/alpholio/reference/config-input/) | 逐字段说明类型、默认值与约束 |
 
@@ -104,7 +99,7 @@ bt.to_config("paper/configs/", data_dir="paper/data/")
 
 包内不附带任何市场指数数据。基准由使用者自备，在 `input.references` 中声明后以 `REF` 桶进入结果表，并在图表的 `buckets` 含 `"REF"` 时上图。
 
-等权组合应配等权指数、市值加权组合应配市值加权指数——同口径才谈得上比较。一条 `references` 会对每个加权方案各复制一行，因此两套加权各配一条指数需要声明两条，再用两个图表配置分别限定 `weights` 与 `signals`，见[多信号](https://mzyang-code.github.io/alpholio/guide/multi-signal/)。
+等权组合应配等权指数、市值加权组合应配市值加权指数——同口径才谈得上比较。一条 `references` 会对每个加权方案各复制一行，因此两套加权各配一条指数需要声明两条，再用两个图表配置分别限定 `weights` 与 `signals`，完整配置见[快速开始](https://mzyang-code.github.io/alpholio/guide/quickstart/)。
 
 ## 本地构建文档
 

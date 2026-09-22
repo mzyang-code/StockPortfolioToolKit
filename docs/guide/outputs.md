@@ -39,13 +39,13 @@ bt = alp.backtest(..., output_dir="outputs/")    # 或在回测时就定好
 
 ```
 <信号文件所在目录>/
-├── signal_mom.feather
-├── signal_str.feather
+├── alpha1.feather
+├── alpha2.feather
 └── outputs/                          ← 自动创建
     ├── long_short_ew.png
     ├── long_short_vw.png
-    ├── decile_spread_mom_ew.png
-    ├── decile_spread_str_ew.png
+    ├── deciles_alpha1_ew.png
+    ├── deciles_alpha2_ew.png
     ├── metrics_by_bucket.csv
     ├── summary_metrics.csv
     └── curves.feather
@@ -81,7 +81,9 @@ bt.save("outputs/", charts=["long_short"], tables=["summary"])
 
 `weight` 取加权方案标签的小写形式（`EW` → `ew`）。信号名转小写并把非字母数字压成连字符。
 
-拆分规则由 `color_mode` 自动决定，详见[多信号](multi-signal.md#图表如何安排多信号)。
+拆分规则由 `color_mode` 自动决定：分位图的色阶正是按分位铺开的，多路信号叠在一起既撞色又撞图例，
+因此逐信号拆图；策略对比图恰恰相反，多路信号必须同图才谈得上比较。该行为可由
+`charts[].split_by_signal` 显式覆盖。
 
 图表数量：
 
@@ -152,7 +154,7 @@ bt.save("outputs/", charts=["long_short"], tables=["summary"])
   "type": "summary",
   "buckets": ["H-L", "REF"],
   "weights": ["EW"],
-  "signals": ["MOM"]
+  "signals": ["alpha1"]
 }
 ```
 

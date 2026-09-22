@@ -12,10 +12,9 @@ so any stage can be swapped without touching the others.
 InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult──▶ Analyzer ──AnalysisResult──▶ Visualizer ──▶ PNG / CSV
 ```
 
-The toolkit consumes alpha only — it never generates signals. Price-based factors such as
-MOM / STR / WSTR are ordinary inputs; see the
-[daily MOM example](https://mzyang-code.github.io/alpholio/examples/daily-mom/) for one
-worked end to end.
+The toolkit consumes alpha only — it never generates signals. Two worked examples, monthly
+and daily, are in the
+[quick start](https://mzyang-code.github.io/alpholio/guide/quickstart/).
 
 ## Install
 
@@ -101,15 +100,10 @@ The full documentation is written in Chinese. Direct links:
 
 | Page | Contents |
 |---|---|
-| [Quick start](https://mzyang-code.github.io/alpholio/guide/quickstart/) | Install through the first equity curve |
+| [Quick start](https://mzyang-code.github.io/alpholio/guide/quickstart/) | Install, a monthly and a daily worked example, and every chart the package produces |
 | [Concepts](https://mzyang-code.github.io/alpholio/guide/concepts/) | Four modules, three data contracts, extension points |
-| [Preparing input](https://mzyang-code.github.io/alpholio/guide/prepare-data/) | Signal table format, column mapping, forward-return sources |
-| [Data frequency](https://mzyang-code.github.io/alpholio/guide/frequency/) | Daily vs monthly: units, alignment rules, annualisation base |
-| [Multiple signals](https://mzyang-code.github.io/alpholio/guide/multi-signal/) | Running several alphas at once, and how charts split |
 | [Outputs](https://mzyang-code.github.io/alpholio/guide/outputs/) | File listing, naming rules, long-table structure |
 | [Math contract](https://mzyang-code.github.io/alpholio/guide/math/) | The exact formula behind every metric |
-| [Daily example](https://mzyang-code.github.io/alpholio/examples/daily-mom/) | MOM 12-2 end to end: input shape, call, measured results |
-| [Monthly example](https://mzyang-code.github.io/alpholio/examples/monthly-panel/) | Three alphas off one monthly panel, `frequency="monthly"` |
 | [Python API](https://mzyang-code.github.io/alpholio/reference/api/) | `backtest()` parameters and the result object |
 | [Config reference](https://mzyang-code.github.io/alpholio/reference/config-input/) | Per-field types, defaults and constraints |
 
@@ -122,8 +116,9 @@ No market index data is bundled. Benchmark series are supplied by the user throu
 Equal-weighted portfolios should be paired with an equal-weighted index and cap-weighted
 with a cap-weighted index — only like-for-like comparisons mean anything. A single
 `references` entry is replicated across every weighting scheme, so pairing one index per
-scheme takes two entries plus two chart configs constraining `weights` and `signals`. See
-[Multiple signals](https://mzyang-code.github.io/alpholio/guide/multi-signal/).
+scheme takes two entries plus two chart configs constraining `weights` and `signals`. The
+full configuration is in the
+[quick start](https://mzyang-code.github.io/alpholio/guide/quickstart/).
 
 ## Building the docs locally
 

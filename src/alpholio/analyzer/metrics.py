@@ -88,13 +88,5 @@ class TotalEquity(Metric):
         return float(np.cumprod(1.0 + rets)[-1])
 
 
-@METRICS.register()
-class HitRate(Metric):
-    name = "hit_rate"
-
-    def compute(self, rets: np.ndarray, ctx: MetricContext) -> float:
-        return float((rets > 0).mean())
-
-
 def build_metric(name: str) -> Metric:
     return METRICS.get(name)()

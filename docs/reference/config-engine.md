@@ -160,7 +160,7 @@ Portfolio Engine 的配置。职责是把标准化后的面板切成分位桶、
 
 !!! warning "一条 references 会覆盖全部加权方案"
 
-    逐加权方案复制意味着一条基准会同时出现在 EW 与 VW 两套结果中。等权与市值加权各配一条指数时，需在图表层按 `weights` 与 `signals` 分别限定，见[给两套加权各配一条基准](../guide/multi-signal.md#给两套加权各配一条基准)。
+    逐加权方案复制意味着一条基准会同时出现在 EW 与 VW 两套结果中。等权与市值加权各配一条指数时，需在图表层按 `weights` 与 `signals` 分别限定，完整配置见[日频例子](../guide/quickstart.md#日频单路-alpha-配两条基准)。
 
 ### reference_lag
 

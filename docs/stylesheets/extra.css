@@ -80,15 +80,6 @@
   opacity: 1;
 }
 
-/* 数据流图：横向可滚动，窄屏不撑破版面 */
-.alpholio-flow {
-  overflow-x: auto;
-}
-
-.alpholio-flow .highlight {
-  min-width: 0;
-}
-
 /* 手机宽度 */
 @media screen and (max-width: 44.9375em) {
   .alpholio-hero {

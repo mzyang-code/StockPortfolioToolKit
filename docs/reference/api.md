@@ -34,7 +34,7 @@ bt = alp.backtest(signals=alpha_df, prices=price_df, horizon=5)
 对不上的列会报错并列出源表实际列名，不会静默产出空表：
 
 ```
-ContractError: frame<MOM>: 缺少必需列 ['date', 'id']；源列为 ['anchor', 'sym', 'alpha']。
+ContractError: frame<alpha1>: 缺少必需列 ['date', 'id']；源列为 ['anchor', 'sym', 'alpha']。
 源列名与之不同时请用 column_map 声明映射。
 ```
 
@@ -68,7 +68,7 @@ ContractError: frame<MOM>: 缺少必需列 ['date', 'id']；源列为 ['anchor',
 bt = alp.backtest(signals=alpha_df, prices=panel_df, horizon=1, frequency="monthly")
 ```
 
-月频面板沿用默认的 `"daily"` 会让年化指标偏离 21 倍且不触发告警，详见[数据频率](../guide/frequency.md)。
+月频面板沿用默认的 `"daily"` 会让年化指标偏离 21 倍且不触发告警，完整写法见[月频例子](../guide/quickstart.md#月频三路-alpha-同跑)。
 
 ### 三处按数据推导的默认值
 
@@ -93,7 +93,7 @@ bt = alp.backtest(signals=alpha_df, prices=panel_df, horizon=1, frequency="month
 
 | 参数 | 类型 | 默认 | 说明 |
 |---|---|---|---|
-| `metrics` | list | 五项基础指标 | 指标清单，可选项见[数学口径](../guide/math.md) |
+| `metrics` | list | 六项基础指标 | 指标清单，可选项见[数学口径](../guide/math.md) |
 | `periods_per_year` | float | 由持有期推导 | 年化因子，显式给出则优先 |
 | `trading_days_per_year` | float | `252.0` | 日度口径下年化因子的分子；月度口径固定取 12 |
 | `risk_free_rate` | float | `0.0` | 无风险利率 |
@@ -190,7 +190,7 @@ result = alp.run_pipeline("paper/configs/")
 ```python
 alp.settings.style.figsize = (10, 6)
 alp.settings.style.dpi = 300
-alp.settings.style.palette = {"MOM": "#1f77b4"}
+alp.settings.style.palette = {"alpha1": "#1f77b4"}
 alp.settings.style.gradient_colormap = "plasma"
 
 alp.settings.reset()            # 复原到出厂默认
@@ -211,7 +211,7 @@ from alpholio.config_schema import (
 
 cfg = InputConfig(
     prices=PriceSpec(frame=price_df),
-    signals=[SignalSpec(name="MOM", frame=alpha_df)],
+    signals=[SignalSpec(name="alpha1", frame=alpha_df)],
 )
 bundle = InputProcessor(cfg).run()
 engine = PortfolioEngine(

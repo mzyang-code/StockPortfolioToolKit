@@ -9,7 +9,7 @@ from .pipeline import PipelineResult, run_pipeline
 from .settings import settings
 from .visualizer import Visualizer
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 __all__ = [
     # 一行跑通的门面入口
     "backtest",

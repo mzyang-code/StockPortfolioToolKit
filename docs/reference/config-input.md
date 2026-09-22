@@ -57,7 +57,7 @@ Input Processor 的配置。职责是取数、把源列名映射成包内统一�
 它只能通过 Python 构造给出：
 
 ```python
-SignalSpec(name="MOM", frame=alpha_df)
+SignalSpec(name="alpha1", frame=alpha_df)
 ```
 
 `path` 支持 `${VAR}` 形式的变量展开。取值顺序：先查配置的 `vars`，再查环境变量，两处都没有则抛 `KeyError`。路径中的 `~` 会展开为用户主目录。
@@ -65,7 +65,7 @@ SignalSpec(name="MOM", frame=alpha_df)
 ```json
 {
   "vars": { "DATA": "/mnt/research/panels" },
-  "signals": [{ "path": "${DATA}/signal_mom.feather", "...": "..." }]
+  "signals": [{ "path": "${DATA}/alpha1.feather", "...": "..." }]
 }
 ```
 
@@ -284,7 +284,7 @@ alpha 信号源列表，**至少一项**，为空时抛 `ContractError`。每项
 - 前视收益取「锚点所在月最后一个可用 `close` → `horizon` 个自然月后该月最后一个可用 `close`」，目标月缺失时该期为 `NaN`，不会顺延到再下一个有数据的月份
 - 市值取锚点所在月最后一个可用 `cap`
 
-因此日频价格面板配月度调仓可直接跑：信号落在月内哪一天、价格面板的月末是哪一天，两者不必是同一天。详见[数据频率](../guide/frequency.md)。
+因此日频价格面板配月度调仓可直接跑：信号落在月内哪一天、价格面板的月末是哪一天，两者不必是同一天。完整写法见[月频例子](../guide/quickstart.md#月频三路-alpha-同跑)。
 
 !!! note "与 `references[].frequency` 不是同一件事"
 

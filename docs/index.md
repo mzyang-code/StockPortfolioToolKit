@@ -16,41 +16,6 @@ hide:
 
 </div>
 
-<div class="alpholio-flow" markdown>
-
-```
-InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult──▶ Analyzer ──AnalysisResult──▶ Visualizer ──▶ PNG / CSV
-   input.json                     engine.json                     analyzer.json                visualizer.json
-```
-
-</div>
-
-四个模块构成单向数据流。每个模块拥有唯一的公开入口，任何一环都可以单独替换而不影响其余模块。
-
-## 三行跑通
-
-因子与价格表直接传 DataFrame，无需先落盘：
-
-```python
-import alpholio as alp
-
-bt = alp.backtest(signals=alpha_df, prices=price_df, horizon=5)
-bt.summary(bucket="H-L")       # 多空腿指标
-bt.plot("long_short")          # 净值图，返回 matplotlib Figure
-```
-
-月度面板加一个 `frequency`，`horizon` 与调仓间隔随之按自然月计：
-
-```python
-bt = alp.backtest(signals=alpha_df, prices=panel_df, horizon=1, frequency="monthly")
-```
-
-批量执行与复现归档走配置目录，两条路径结果逐值一致：
-
-```bash
-alpholio run --config-dir configs/
-```
-
 ## 从这里开始
 
 <div class="grid cards" markdown>
@@ -59,9 +24,9 @@ alpholio run --config-dir configs/
 
     ---
 
-    从安装到跑出第一张净值曲线
+    安装、月频与日频两个完整例子，以及全部图表
 
-    [:octicons-arrow-right-24: 五分钟上手](guide/quickstart.md)
+    [:octicons-arrow-right-24: 照着跑一遍](guide/quickstart.md)
 
 -   :material-sitemap-outline: **核心概念**
 
@@ -71,13 +36,13 @@ alpholio run --config-dir configs/
 
     [:octicons-arrow-right-24: 运作方式](guide/concepts.md)
 
--   :material-file-document-multiple-outline: **完整示例**
+-   :material-file-document-multiple-outline: **产物与落盘**
 
     ---
 
-    日频与月频各一例，含输入形态与实测指标
+    图与表的命名规则、落点与完整长表导出
 
-    [:octicons-arrow-right-24: 照着跑一遍](examples/daily-mom.md)
+    [:octicons-arrow-right-24: 看产出什么](guide/outputs.md)
 
 -   :material-function-variant: **数学口径**
 
@@ -106,8 +71,6 @@ alpholio run --config-dir configs/
 | 年化收益、波动、夏普、回撤、换手、IC | 撮合、滑点与交易成本建模 |
 | 净值曲线与指标表落盘 | 实盘下单 |
 
-MOM / STR / WSTR 这类价格因子在本包中属于普通输入，与任何外部 alpha 同等对待。
-
 ## 设计约定
 
 三条贯穿全包、且有测试覆盖的口径约定：
@@ -120,7 +83,7 @@ MOM / STR / WSTR 这类价格因子在本包中属于普通输入，与任何外
 
     `engine.holding_days` 留空即继承该值。两者显式不等时告警但不中断，因为那意味着收益的测量期与年化时假定的持有期不是同一件事。
 
-    一期的**单位**则由 `input.frequency` 单独声明：日度数交易日、月度数自然月，年化基数随之取 252 或 12。月频面板漏声明会让年化指标偏离 21 倍且不告警，见[数据频率](guide/frequency.md)。
+    一期的**单位**则由 `input.frequency` 单独声明：日度数交易日、月度数自然月，年化基数随之取 252 或 12。月频面板漏声明会让年化指标偏离 21 倍且不告警，写法见[月频面板](guide/quickstart.md#月频三路-alpha-同跑)。
 
 !!! warning "调仓间隔应与测量期相等"
 
@@ -130,7 +93,7 @@ MOM / STR / WSTR 这类价格因子在本包中属于普通输入，与任何外
 
 基准序列由使用者自备，在 `input.references` 中声明后进入结果表与图表，`bucket` 固定为 `REF`。包内不附带任何市场指数数据。
 
-等权组合应配等权指数、市值加权组合应配市值加权指数——同口径才谈得上比较。两套加权各配一条指数的完整配置见[给两套加权各配一条基准](guide/multi-signal.md#给两套加权各配一条基准)。
+等权组合应配等权指数、市值加权组合应配市值加权指数——同口径才谈得上比较。两套加权各配一条指数的完整配置见[日频例子](guide/quickstart.md#日频单路-alpha-配两条基准)。
 
 ## 许可证
 

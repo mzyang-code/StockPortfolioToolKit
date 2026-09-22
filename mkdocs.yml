@@ -48,6 +48,12 @@ theme:
 extra_css:
   - stylesheets/extra.css
 
+# 数学口径页的公式由 MathJax 渲染。arithmatex 的 generic 模式把 $...$ 与 $$...$$
+# 原样留给前端，因此下面这个 script 缺失时公式会退化成纯文本而非报错。
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
 plugins:
   # theme.language 只管界面文案，不影响检索。中文检索须在此显式声明 lang，
   # 否则索引按英文 stemmer 建立，对中文命中率极低。
@@ -60,6 +66,8 @@ plugins:
 markdown_extensions:
   - abbr
   - admonition
+  - pymdownx.arithmatex:
+      generic: true
   - attr_list
   - def_list
   - footnotes
@@ -95,14 +103,8 @@ nav:
   - 指南:
       - 快速开始: guide/quickstart.md
       - 核心概念: guide/concepts.md
-      - 准备输入数据: guide/prepare-data.md
-      - 数据频率: guide/frequency.md
-      - 多信号: guide/multi-signal.md
       - 产物与落盘: guide/outputs.md
       - 数学口径: guide/math.md
-  - 示例:
-      - 日频：MOM 12-2 动量: examples/daily-mom.md
-      - 月频：多路预测面板: examples/monthly-panel.md
   - 参考:
       - Python API: reference/api.md
       - input.json: reference/config-input.md
