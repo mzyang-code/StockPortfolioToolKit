@@ -3,7 +3,7 @@
 Cross-sectional portfolio backtesting. The toolkit consumes alpha and handles bucketing,
 weighting, metrics and charts.
 
-**📖 [Documentation](https://mzyang-code.github.io/alpholio/)** (Chinese) ｜ [简体中文 README](README.zh-CN.md)
+**📖 [Documentation](https://mzyang-code.github.io/alpholio/)** (Chinese) ｜ [简体中文 README](https://github.com/mzyang-code/alpholio/blob/main/README.zh-CN.md)
 
 Four modules, one direction of data flow. Each module owns a single public entry point,
 so any stage can be swapped without touching the others.
@@ -13,9 +13,16 @@ InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult─�
 ```
 
 The toolkit consumes alpha only — it never generates signals. Price-based factors such as
-MOM / STR / WSTR are ordinary inputs; see [examples/build_jkx_factors.py](examples/build_jkx_factors.py).
+MOM / STR / WSTR are ordinary inputs; see
+[examples/build_jkx_factors.py](https://github.com/mzyang-code/alpholio/blob/main/examples/build_jkx_factors.py).
 
 ## Install
+
+```bash
+pip install alpholio
+```
+
+Working from a clone instead:
 
 ```bash
 pip install -e .                      # compatible ranges
@@ -24,7 +31,7 @@ pip install -e ".[notebook]"          # adds what quickstart_*.ipynb needs
 pip install -e ".[docs]"              # adds the documentation site toolchain
 ```
 
-To reproduce the exact verified combination (Python 3.12.2, all 148 tests passing):
+To reproduce the exact verified combination (Python 3.12.2):
 
 ```bash
 conda env create -f environment.yml
@@ -129,6 +136,10 @@ mkdocs serve
 ```bash
 python -m pytest
 ```
+
+142 tests run on synthetic fixtures alone. A further 6 in `tests/test_monthly_cache.py`
+regress against a real monthly panel that is not distributed with the repository, and skip
+when it is absent.
 
 ## License
 

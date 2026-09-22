@@ -2,7 +2,7 @@
 
 截面投资组合回测工具包。输入端只需提供 alpha，分桶、加权、指标计算与出图由工具包完成。
 
-**📖 [完整文档](https://mzyang-code.github.io/alpholio/)** ｜ [English](README.md)
+**📖 [完整文档](https://mzyang-code.github.io/alpholio/)** ｜ [English](https://github.com/mzyang-code/alpholio/blob/main/README.md)
 
 四个模块，单向数据流。每个模块拥有唯一的公开入口，任何一环都可以单独替换而不影响其他模块。
 
@@ -15,13 +15,19 @@ InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult─�
 ## 安装
 
 ```bash
+pip install alpholio
+```
+
+从仓库克隆后开发安装：
+
+```bash
 pip install -e .                      # 兼容区间安装
 pip install -e ".[dev]"               # 追加测试依赖
 pip install -e ".[notebook]"          # 追加跑 quickstart_*.ipynb 的依赖
 pip install -e ".[docs]"              # 追加构建文档站的依赖
 ```
 
-复现经过验证的那一组确切版本（Python 3.12.2 + 全部 148 个测试通过）：
+复现经过验证的那一组确切版本（Python 3.12.2）：
 
 ```bash
 conda env create -f environment.yml
@@ -112,6 +118,9 @@ mkdocs serve
 ```bash
 python -m pytest
 ```
+
+142 个测试只依赖合成夹具，任何环境下都可跑。另有 6 个位于 `tests/test_monthly_cache.py`，
+以真实月频面板回归月度口径，该面板不随仓库分发，缺失时整个模块跳过。
 
 ## 许可证
 

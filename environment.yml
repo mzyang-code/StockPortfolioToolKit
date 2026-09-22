@@ -3,7 +3,8 @@
 #     conda activate alpholio
 #     pip install -e .
 #
-# 这组版本跑通了全部 148 个测试（Python 3.12.2）。
+# 这组版本在 Python 3.12.2 下跑通全部测试：142 个只依赖合成夹具，另 6 个需要
+# tests/cache/ 下的月频面板，该面板不随仓库分发，缺失时跳过。
 # 包本身的兼容区间更宽松，见 pyproject.toml 的 [project].dependencies。
 name: alpholio
 channels:
