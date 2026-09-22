@@ -58,7 +58,7 @@ def load_sp500_daily() -> pd.DataFrame:
     """
     from importlib.resources import files
 
-    # 逐级 joinpath：多参数形式要 Python 3.11+，而本包声明支持 3.9
+    # 逐级 joinpath：多参数形式要 Python 3.11+，而本包声明支持 3.10
     resource = files(__package__).joinpath(DATA_DIR).joinpath(DATA_FILE)
     try:
         handle = resource.open("rb")

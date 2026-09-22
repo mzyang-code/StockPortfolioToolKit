@@ -10,6 +10,14 @@
 === "pip"
 
     ```bash
+    pip install alpholio
+    ```
+
+    需要 Python 3.10 及以上。
+
+=== "从仓库克隆"
+
+    ```bash
     pip install -e .                      # 兼容区间安装
     pip install -e ".[dev]"               # 追加测试依赖
     pip install -e ".[notebook]"          # 追加跑 quickstart_*.ipynb 的依赖
