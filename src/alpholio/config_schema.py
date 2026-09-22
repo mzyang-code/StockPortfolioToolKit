@@ -262,7 +262,7 @@ class VolRescaleSpec:
 class AnalyzerConfig:
     metrics: List[str] = field(
         default_factory=lambda: [
-            "ann_ret", "ann_vol", "sharpe", "max_drawdown", "total_equity",
+            "ann_ret", "cagr", "ann_vol", "sharpe", "max_drawdown", "total_equity",
         ]
     )
     periods_per_year: Optional[float] = None
@@ -345,7 +345,7 @@ class TableSpec:
     weights: Optional[List[str]] = None
     signals: Optional[List[str]] = None
     percent_columns: List[str] = field(
-        default_factory=lambda: ["ann_ret", "ann_vol", "max_drawdown", "turnover"]
+        default_factory=lambda: ["ann_ret", "cagr", "ann_vol", "max_drawdown", "turnover"]
     )
     decimals: int = 3
 

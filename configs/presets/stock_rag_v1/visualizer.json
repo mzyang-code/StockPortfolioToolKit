@@ -42,6 +42,7 @@
       "type": "summary",
       "percent_columns": [
         "ann_ret",
+        "cagr",
         "ann_vol",
         "max_drawdown",
         "turnover"

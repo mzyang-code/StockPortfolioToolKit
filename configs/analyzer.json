@@ -1,5 +1,5 @@
 {
-  "metrics": ["ann_ret", "ann_vol", "sharpe", "max_drawdown", "total_equity"],
+  "metrics": ["ann_ret", "cagr", "ann_vol", "sharpe", "max_drawdown", "total_equity"],
   "periods_per_year": null,
   "trading_days_per_year": 252.0,
   "risk_free_rate": 0.0,

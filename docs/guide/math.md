@@ -62,11 +62,23 @@ P = 年化基数 / engine.holding_days    # 否则由此推导
 ann_ret = mean(r) × P
 ```
 
-!!! note "算术年化，不是几何年化"
+!!! note "算术年化，不是复合年化"
 
-    该指标是逐期收益的算术平均乘以每年期数，**不是** `total_equity^(P/n) - 1`。
+    该指标是逐期收益的算术平均乘以每年期数，**不是** `total_equity^(P/n) - 1`。后者是单独的指标 [`cagr`](#cagr)。
 
-    两者在收益波动较大时可以相差很多：算术年化高于几何年化，差额随波动增大而增大。同一张 `summary` 里 `ann_ret` 走算术口径、`total_equity` 走几何累乘，两者不可互相反推。
+    两者可以相差很多，方向由 `P` 与波动共同决定：复利的凸性把 `ann_ret` 往上推（`(1+m)^P − 1 > m·P`），波动拖累把它往下拉（约 `σ²/2`）。月频面板（`P = 12`）上凸性通常占上风，`cagr` 明显高于 `ann_ret`；日频面板（`P = 252`）上单期收益极小，两者接近，波动大时 `cagr` 反而更低。
+
+    同一张 `summary` 里 `ann_ret` 走算术口径、`total_equity` 与 `cagr` 走几何累乘，**不可互相反推**。对照外部文献的绩效表前先确认对方报的是哪一种：不少论文的 Ann. Ret. 是 `cagr` 口径，而 Sharpe 仍按算术口径算，因此表内 `SR ≠ Ann.Ret / Ann.Vol`。
+
+### cagr —— 复合年化收益
+
+```
+cagr = (cumprod(1 + r)[-1])^(P / n) - 1
+```
+
+净值按简单收益逐期累乘后折回年度复合增长率，`n` 为期数。与 `total_equity` 同一套口径，只是换算成年率。期末净值跌破 0 时无定义，返回 NaN。
+
+该指标假设每期收益首尾相接、盈亏滚动再投入，因此只在 `rebalance_freq` 与 `horizon` 相等时有意义；两者不等会触发 `HoldingPeriodWarning`，此时 `cagr` 与 `total_equity`、`max_drawdown` 一同失真。
 
 ### ann_vol —— 年化波动
 
@@ -110,7 +122,7 @@ hit_rate = mean(r > 0)
 严格大于 0 才计入，收益恰为 0 的期记作未命中。该指标不在默认 `metrics` 列表中，需显式给出：
 
 ```python
-alp.backtest(..., metrics=["ann_ret", "ann_vol", "sharpe",
+alp.backtest(..., metrics=["ann_ret", "cagr", "ann_vol", "sharpe",
                            "max_drawdown", "total_equity", "hit_rate"])
 ```
 

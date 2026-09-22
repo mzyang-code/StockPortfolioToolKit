@@ -33,6 +33,22 @@ class AnnualizedReturn(Metric):
         return float(rets.mean() * ctx.periods_per_year)
 
 
+# 净值按简单收益累乘，再折回每年一期的复合增长率。与 ann_ret 是两套口径：
+# ann_ret 把单期收益线性放大 P 倍，cagr 则让它们逐期滚动复利。月频面板上后者通常明显
+# 更高——复利的凸性 (1+m)^P − 1 > m·P 压过了波动拖累。净值跌破 0 时复合增长率无定义。
+@METRICS.register()
+class CompoundAnnualGrowthRate(Metric):
+    name = "cagr"
+
+    def compute(self, rets: np.ndarray, ctx: MetricContext) -> float:
+        if len(rets) == 0:
+            return float("nan")
+        equity = float(np.cumprod(1.0 + rets)[-1])
+        if equity <= 0.0:
+            return float("nan")
+        return float(equity ** (ctx.periods_per_year / len(rets)) - 1.0)
+
+
 @METRICS.register()
 class AnnualizedVolatility(Metric):
     name = "ann_vol"

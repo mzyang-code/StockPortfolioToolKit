@@ -30,6 +30,25 @@ def test_equity_and_drawdown():
     assert build_metric("max_drawdown").compute(rets, CTX) == pytest.approx(0.75 / 1.5 - 1)
 
 
+def test_cagr_is_the_geometric_counterpart_of_ann_ret():
+    rets = np.full(24, 0.02)
+    cagr = build_metric("cagr").compute(rets, CTX)
+    # 恒定收益下就是逐期复利：(1.02)^12 − 1
+    assert cagr == pytest.approx(1.02**12 - 1)
+    # 算术口径把同一组收益线性放大 12 倍，月频下明显低于复利口径
+    assert build_metric("ann_ret").compute(rets, CTX) == pytest.approx(0.24)
+    assert cagr > build_metric("ann_ret").compute(rets, CTX)
+    # 与 total_equity 同源：折算基数是期数而非年数
+    equity = build_metric("total_equity").compute(rets, CTX)
+    assert cagr == pytest.approx(equity ** (12.0 / len(rets)) - 1)
+
+
+# 净值跌破 0 时复合增长率无定义：负数开分数次幂会得到复数或 NaN，此处直接返回 NaN
+def test_cagr_is_nan_when_equity_wiped_out():
+    assert np.isnan(build_metric("cagr").compute(np.array([0.1, -1.0, 0.2]), CTX))
+    assert np.isnan(build_metric("cagr").compute(np.array([]), CTX))
+
+
 # 相邻两期成分的 Jaccard 距离
 def test_turnover_jaccard():
     members = pd.DataFrame({
