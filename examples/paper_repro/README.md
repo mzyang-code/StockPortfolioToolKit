@@ -8,12 +8,18 @@ MDD 三项全部吻合，Ann.Ret 系统性对不上——差异全部来自年�
 
 ## 数据
 
-四个月频预测面板，1998-01 ~ 2024-11 共 323 个月，每行一个 `(permno, eom)`：
+四个月频预测面板，1998-01 ~ 2024-11 共 323 个月，每行一个 `(permno, eom)`。
+两个维度的交叉：图结构（行）× 模型输入特征（列）。
 
-| | 小 universe（8,340 permno，840,973 行） | 大 universe（9,357 permno，912,948 行） |
+| | CR：仅用最近 1–12 月累计收益（840,973 行） | FC44：全部 44 个公司特征（912,948 行） |
 |---|---|---|
 | analyst coverage graph | `merged_pred_analyst(1).parquet` | `merged_pred_analyst_44(1).parquet` |
 | mutual fund holding graph | `merged_pred_holding(1).parquet` | `merged_pred_holding_44(1).parquet` |
+
+行数差异不是 universe 定义不同：CR 的 `(permno, eom)` 是 FC44 的真子集，仅 FC44 覆盖的
+71,975 个样本里 98.4% 落在每只股票入样后的头 11 个月，而月龄 ≥ 12 的样本仅 0.1% 被 CR
+排除。构造 1–12 月累计收益需要 12 个月历史，新股因此进不了 CR 那一列，行数差是特征构造
+窗口的副产品。
 
 面板不随仓库分发，默认从 `tests/cache/` 读取，用 `--data-dir` 指向别处。所需列：
 
