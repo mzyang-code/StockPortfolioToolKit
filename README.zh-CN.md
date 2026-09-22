@@ -10,7 +10,7 @@
 InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult──▶ Analyzer ──AnalysisResult──▶ Visualizer ──▶ PNG / CSV
 ```
 
-本包只消费 alpha，不生成任何信号。MOM / STR / WSTR 这类价格因子属于普通输入，与任何外部 alpha 同等对待。
+本包只消费 alpha，不生成任何信号。MOM / STR / WSTR 这类价格因子属于普通输入，与任何外部 alpha 同等对待，一个完整的例子见[日频：MOM 12-2 动量](https://mzyang-code.github.io/alpholio/examples/daily-mom/)。
 
 ## 安装
 
@@ -22,8 +22,6 @@ pip install alpholio
 
 ```bash
 pip install -e .                      # 兼容区间安装
-pip install -e ".[dev]"               # 追加测试依赖
-pip install -e ".[notebook]"          # 追加跑 quickstart_*.ipynb 的依赖
 pip install -e ".[docs]"              # 追加构建文档站的依赖
 ```
 
@@ -97,6 +95,8 @@ bt.to_config("paper/configs/", data_dir="paper/data/")
 | [多信号](https://mzyang-code.github.io/alpholio/guide/multi-signal/) | 一次跑多路 alpha，以及图表如何拆分 |
 | [产物与落盘](https://mzyang-code.github.io/alpholio/guide/outputs/) | 文件清单、命名规则与长表结构 |
 | [数学口径](https://mzyang-code.github.io/alpholio/guide/math/) | 每个指标的确切算法与失真条件 |
+| [日频示例](https://mzyang-code.github.io/alpholio/examples/daily-mom/) | MOM 12-2 全流程：输入形态、调用方式与实测结果 |
+| [月频示例](https://mzyang-code.github.io/alpholio/examples/monthly-panel/) | 一张月频面板跑三路 alpha，`frequency="monthly"` |
 | [Python API](https://mzyang-code.github.io/alpholio/reference/api/) | `backtest()` 逐参数说明与结果对象 |
 | [配置参考](https://mzyang-code.github.io/alpholio/reference/config-input/) | 逐字段说明类型、默认值与约束 |
 
@@ -112,15 +112,6 @@ bt.to_config("paper/configs/", data_dir="paper/data/")
 pip install -e ".[docs]"
 mkdocs serve
 ```
-
-## 测试
-
-```bash
-python -m pytest
-```
-
-142 个测试只依赖合成夹具，任何环境下都可跑。另有 6 个位于 `tests/test_monthly_cache.py`，
-以真实月频面板回归月度口径，该面板不随仓库分发，缺失时整个模块跳过。
 
 ## 许可证
 

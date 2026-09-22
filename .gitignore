@@ -3,7 +3,6 @@ __pycache__/
 *.egg-info/
 build/
 dist/
-.pytest_cache/
 .ipynb_checkpoints/
 .venv/
 venv/
@@ -17,14 +16,14 @@ outputs/
 logs/
 cache/
 site/
+
+# 数据文件不进仓库。文档中的示例只引用输入表的前几行，不附带数据本身。
 *.feather
 *.parquet
-!tests/**/*.feather
 
 # 本地编辑器与 AI 助手配置，不进仓库
 .claude/
 .vscode/
 
-# 草稿 notebook（仅保留 quickstart_mom.ipynb 作为示例）
-jkx.ipynb
-test.ipynb
+# 草稿 notebook
+*.ipynb

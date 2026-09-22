@@ -13,8 +13,9 @@ InputProcessor ──InputBundle──▶ PortfolioEngine ──EngineResult─�
 ```
 
 The toolkit consumes alpha only — it never generates signals. Price-based factors such as
-MOM / STR / WSTR are ordinary inputs; see
-[examples/build_jkx_factors.py](https://github.com/mzyang-code/alpholio/blob/main/examples/build_jkx_factors.py).
+MOM / STR / WSTR are ordinary inputs; see the
+[daily MOM example](https://mzyang-code.github.io/alpholio/examples/daily-mom/) for one
+worked end to end.
 
 ## Install
 
@@ -26,8 +27,6 @@ Working from a clone instead:
 
 ```bash
 pip install -e .                      # compatible ranges
-pip install -e ".[dev]"               # adds the test suite
-pip install -e ".[notebook]"          # adds what quickstart_*.ipynb needs
 pip install -e ".[docs]"              # adds the documentation site toolchain
 ```
 
@@ -109,6 +108,8 @@ The full documentation is written in Chinese. Direct links:
 | [Multiple signals](https://mzyang-code.github.io/alpholio/guide/multi-signal/) | Running several alphas at once, and how charts split |
 | [Outputs](https://mzyang-code.github.io/alpholio/guide/outputs/) | File listing, naming rules, long-table structure |
 | [Math contract](https://mzyang-code.github.io/alpholio/guide/math/) | The exact formula behind every metric |
+| [Daily example](https://mzyang-code.github.io/alpholio/examples/daily-mom/) | MOM 12-2 end to end: input shape, call, measured results |
+| [Monthly example](https://mzyang-code.github.io/alpholio/examples/monthly-panel/) | Three alphas off one monthly panel, `frequency="monthly"` |
 | [Python API](https://mzyang-code.github.io/alpholio/reference/api/) | `backtest()` parameters and the result object |
 | [Config reference](https://mzyang-code.github.io/alpholio/reference/config-input/) | Per-field types, defaults and constraints |
 
@@ -130,16 +131,6 @@ scheme takes two entries plus two chart configs constraining `weights` and `sign
 pip install -e ".[docs]"
 mkdocs serve
 ```
-
-## Tests
-
-```bash
-python -m pytest
-```
-
-142 tests run on synthetic fixtures alone. A further 6 in `tests/test_monthly_cache.py`
-regress against a real monthly panel that is not distributed with the repository, and skip
-when it is absent.
 
 ## License
 

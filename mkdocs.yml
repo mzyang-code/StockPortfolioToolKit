@@ -100,6 +100,9 @@ nav:
       - 多信号: guide/multi-signal.md
       - 产物与落盘: guide/outputs.md
       - 数学口径: guide/math.md
+  - 示例:
+      - 日频：MOM 12-2 动量: examples/daily-mom.md
+      - 月频：多路预测面板: examples/monthly-panel.md
   - 参考:
       - Python API: reference/api.md
       - input.json: reference/config-input.md

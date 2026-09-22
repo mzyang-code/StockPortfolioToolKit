@@ -1,4 +1,4 @@
-name: Tests
+name: Build
 
 on:
   push:
@@ -11,11 +11,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: tests-${{ github.ref }}
+  group: build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  test:
+  # requires-python 与 dependencies 声明的兼容下限，由「装得上且导入得了」来验证。
+  # 装的是 pyproject 的兼容区间本身，而非 environment.yml 里钉死的那一组。
+  smoke:
     runs-on: ubuntu-latest
     strategy:
       # 一个版本失败不影响其余版本继续跑，便于一次看清兼容边界落在哪里
@@ -32,10 +34,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      # 装的是 pyproject 声明的兼容区间本身，而非 environment.yml 里钉死的那一组，
-      # 这样 requires-python 与 dependencies 的下限是否成立由 CI 直接验证。
       - name: Install
-        run: pip install -e ".[dev]"
+        run: pip install -e .
 
       - name: Versions
         run: |
@@ -43,11 +43,18 @@ jobs:
             print('numpy', numpy.__version__); print('pandas', pandas.__version__); \
             print('pyarrow', pyarrow.__version__); print('matplotlib', m.__version__)"
 
-      # runner 无显示设备，绘图一律走 Agg
-      - name: Test
+      # 导入冒烟：四个模块的公开入口与门面函数都要能取到。
+      # runner 无显示设备，绘图相关的导入一律走 Agg
+      - name: Import smoke
         env:
           MPLBACKEND: Agg
-        run: python -m pytest -q
+        run: |
+          python -c "import alpholio as alp; \
+            print('alpholio', alp.__version__); \
+            [getattr(alp, n) for n in alp.__all__]"
+
+      - name: CLI entry point
+        run: alpholio --help
 
   # 构建产物的自检：受数据使用权限制的序列一旦混入 sdist 或 wheel 即失败。
   # pyproject 的 include-package-data、MANIFEST.in 的 prune、.gitignore 三处

@@ -71,6 +71,14 @@ alpholio run --config-dir configs/
 
     [:octicons-arrow-right-24: 运作方式](guide/concepts.md)
 
+-   :material-file-document-multiple-outline: **完整示例**
+
+    ---
+
+    日频与月频各一例，含输入形态与实测指标
+
+    [:octicons-arrow-right-24: 照着跑一遍](examples/daily-mom.md)
+
 -   :material-function-variant: **数学口径**
 
     ---

@@ -19,8 +19,7 @@
 
     ```bash
     pip install -e .                      # 兼容区间安装
-    pip install -e ".[dev]"               # 追加测试依赖
-    pip install -e ".[notebook]"          # 追加跑 quickstart_*.ipynb 的依赖
+    pip install -e ".[docs]"              # 追加构建文档站的依赖
     ```
 
 === "conda（复现已验证版本）"
@@ -31,28 +30,17 @@
     pip install -e .
     ```
 
-    对应 Python 3.12.2 与全部测试通过的那一组确切版本。
+    对应 Python 3.12.2 与已验证的那一组确切版本。
 
 安装后会注册命令行入口 `alpholio`。
 
-!!! tip "示例与 notebook 中的数据位置是占位符"
+!!! tip "文档中的数据位置是占位符"
 
-    仓库不含任何本机绝对路径，示例里的数据位置一律写作 `/path/to/...`，运行前需指向实际位置。
-    三处入口各有自己的覆盖方式：
+    包内与文档内都不含任何本机绝对路径，数据位置一律写作 `/path/to/...`，运行前需指向实际位置。
+    JSON 配置用 `vars` 块统一换根目录，Python API 直接传路径或内存表。
 
-    | 入口 | 覆盖方式 |
-    |---|---|
-    | `quickstart_*.ipynb` | 环境变量 `ALPHOLIO_PRICES`（价格面板文件）、`ALPHOLIO_WORK`（产物根目录） |
-    | `examples/*/build_signal.py` | 命令行参数 `--prices`、`--out` |
-    | `examples/*/configs/input.json` | 改 `vars` 块中的 `CACHE`、`SIGNALS` |
-
-    ```bash
-    export ALPHOLIO_PRICES=/your/cache/processed/processed_stock_data.feather
-    export ALPHOLIO_WORK=/your/cache
-    ```
-
-    `examples/*/run.sh` 另有两个变量：`CONDA_ENV` 指定 conda 环境名（默认 `myenv`），
-    `CONDA_SH` 在 `conda` 不位于 `PATH` 时指向 `<conda 安装目录>/etc/profile.d/conda.sh`。
+    两个完整示例——[日频 MOM 动量](../examples/daily-mom.md)与[月频多路预测面板](../examples/monthly-panel.md)——
+    列出了输入表的形态与实测结果，但不附带数据文件。
 
 ## 准备数据
 
