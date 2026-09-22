@@ -1,0 +1,95 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      # 一个版本失败不影响其余版本继续跑，便于一次看清兼容边界落在哪里
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+
+    name: Python ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      # 装的是 pyproject 声明的兼容区间本身，而非 environment.yml 里钉死的那一组，
+      # 这样 requires-python 与 dependencies 的下限是否成立由 CI 直接验证。
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Versions
+        run: |
+          python -c "import numpy, pandas, pyarrow, matplotlib as m; \
+            print('numpy', numpy.__version__); print('pandas', pandas.__version__); \
+            print('pyarrow', pyarrow.__version__); print('matplotlib', m.__version__)"
+
+      # runner 无显示设备，绘图一律走 Agg
+      - name: Test
+        env:
+          MPLBACKEND: Agg
+        run: python -m pytest -q
+
+  # 构建产物的自检：受数据使用权限制的序列一旦混入 sdist 或 wheel 即失败。
+  # pyproject 的 include-package-data、MANIFEST.in 的 prune、.gitignore 三处
+  # 任一被改动都会在此暴露。
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Build
+        run: |
+          pip install build twine
+          python -m build
+
+      - name: Metadata check
+        run: twine check dist/*
+
+      - name: Restricted data must not ship
+        run: |
+          python - <<'EOF'
+          import pathlib, sys, tarfile, zipfile
+
+          leaked = []
+          for path in pathlib.Path('dist').iterdir():
+              if path.suffix == '.whl':
+                  names = zipfile.ZipFile(path).namelist()
+              else:
+                  with tarfile.open(path) as archive:
+                      names = archive.getnames()
+              leaked += [f"{path.name}:{n}" for n in names if 'sp500' in n or '/data/' in n]
+
+          if leaked:
+              sys.exit("构建产物混入了受限数据：\n" + "\n".join(leaked))
+          print("构建产物未包含受限数据")
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/

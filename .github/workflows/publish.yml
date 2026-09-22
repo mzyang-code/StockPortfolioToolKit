@@ -1,0 +1,90 @@
+name: Publish to PyPI
+
+# 发布由 v 开头的 tag 触发，例如 v0.4.0。
+# tag 名去掉 v 之后必须与 alpholio.__version__ 一致，否则直接失败——
+# PyPI 的版本号一经占用不可覆盖，错版只能作废重发。
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install
+        run: pip install build twine
+
+      - name: Build
+        run: python -m build
+
+      - name: Tag matches __version__
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          python - <<'EOF'
+          import os, pathlib, re, sys
+
+          source = pathlib.Path('src/alpholio/__init__.py').read_text(encoding='utf-8')
+          version = re.search(r'__version__\s*=\s*"([^"]+)"', source).group(1)
+          tag = os.environ['GITHUB_REF'].removeprefix('refs/tags/v')
+          if version != tag:
+              sys.exit(f"tag v{tag} 与 __version__ {version} 不一致")
+          print(f"版本号一致: {version}")
+          EOF
+
+      - name: Metadata check
+        run: twine check dist/*
+
+      # 与 tests.yml 同一道闸：受限数据不得随发布产物外流
+      - name: Restricted data must not ship
+        run: |
+          python - <<'EOF'
+          import pathlib, sys, tarfile, zipfile
+
+          leaked = []
+          for path in pathlib.Path('dist').iterdir():
+              if path.suffix == '.whl':
+                  names = zipfile.ZipFile(path).namelist()
+              else:
+                  with tarfile.open(path) as archive:
+                      names = archive.getnames()
+              leaked += [f"{path.name}:{n}" for n in names if 'sp500' in n or '/data/' in n]
+
+          if leaked:
+              sys.exit("构建产物混入了受限数据：\n" + "\n".join(leaked))
+          print("构建产物未包含受限数据")
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    # Trusted Publisher：凭 OIDC 令牌换取上传权限，仓库内无需存放 API token。
+    # 首次发布前需在 PyPI 的 Publishing 页面登记本仓库、本 workflow 文件名与本环境名。
+    environment:
+      name: pypi
+      url: https://pypi.org/p/alpholio
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
