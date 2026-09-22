@@ -4,7 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "alpholio"
-version = "0.4.0"
+# 版本号的唯一真源是 src/alpholio/__init__.py 的 __version__，见 tool.setuptools.dynamic
+dynamic = ["version"]
 description = "Config-driven cross-sectional portfolio backtesting toolkit"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -14,11 +15,19 @@ keywords = ["quant", "portfolio", "backtest", "cross-section", "finance"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Scientific/Engineering :: Information Analysis",
 ]
-# 兼容区间。确切的已验证版本组合见 requirements.txt / environment.yml
+# 兼容区间。确切的已验证版本组合见 environment.yml
 dependencies = [
     "numpy>=1.23",
     "pandas>=1.5",
@@ -36,6 +45,8 @@ docs = ["mkdocs>=1.6", "mkdocs-material>=9.5", "jieba>=0.42"]
 
 [project.urls]
 Homepage = "https://github.com/mzyang-code/alpholio"
+Documentation = "https://mzyang-code.github.io/alpholio/"
+Source = "https://github.com/mzyang-code/alpholio"
 Issues = "https://github.com/mzyang-code/alpholio/issues"
 
 [project.scripts]
@@ -47,6 +58,9 @@ alpholio = "alpholio.cli:main"
 # 因此必须显式关闭；同时不声明任何 package-data。
 # 基准数据由使用者自行准备，见 input.references。
 include-package-data = false
+
+[tool.setuptools.dynamic]
+version = { attr = "alpholio.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
