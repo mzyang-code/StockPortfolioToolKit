@@ -218,7 +218,7 @@ bt.save("outputs/", charts=["long_short"], tables=["summary"])
 | date | signal_model | bucket | weight | ret | count |
 |---|---|---|---|---|---|
 
-`bucket` 取 `"0".."n-1"`，多空腿为 `"H-L"`，外部基准为 `"REF"`。
+`bucket` 取 `"0".."n-1"`，多空为 `"H-L"`，外部基准为 `"REF"`。
 
 ```python
 returns = result.engine.returns

@@ -43,7 +43,7 @@ import alpholio as alp
 bt = alp.backtest(signals=alpha_df, prices=price_df, horizon=5)
 
 bt.summary()                   # 按 (signal_model, bucket, weight) 的指标
-bt.plot("long_short")          # 多空腿净值图，返回 matplotlib Figure
+bt.plot("long_short")          # 多空净值图，返回 matplotlib Figure
 bt.plot("deciles")             # 分位色阶图
 bt.save("outputs/")            # 图 PNG 与指标 CSV 落盘
 

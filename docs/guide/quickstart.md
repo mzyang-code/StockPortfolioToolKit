@@ -139,7 +139,7 @@ signal_model bucket weight  n_periods  ann_ret   cagr  ann_vol  sharpe  max_draw
 
 ### 指标表：`summary()`
 
-`bucket="H-L"` 只留多空腿，三路信号 × 两套加权共六行：
+`bucket="H-L"` 只留多空，三路信号 × 两套加权共六行：
 
 ```python
 bt.summary(bucket="H-L").round(4)
@@ -180,7 +180,7 @@ signal_model bucket weight  n_periods  ann_ret    cagr  ann_vol  sharpe  max_dra
 
 十个分位的 `ann_ret` 从 −12.04% 单调升到 27.06%，与分位序号的 Spearman 秩相关为 1.000。
 
-### 多空腿对比图：`plot("long_short")`
+### 多空对比图：`plot("long_short")`
 
 `weight` 留空取首个加权方案，此处即 `EW`：
 
@@ -188,7 +188,7 @@ signal_model bucket weight  n_periods  ann_ret    cagr  ann_vol  sharpe  max_dra
 bt.plot("long_short")
 ```
 
-![月频多空腿对比，等权](../images/monthly/long_short_ew.png)
+![月频多空对比，等权](../images/monthly/long_short_ew.png)
 
 三路信号叠在同一张图上，横轴零线是盈亏分界。换 `weight` 就换一张：
 
@@ -196,11 +196,11 @@ bt.plot("long_short")
 bt.plot("long_short", weight="VW")
 ```
 
-![月频多空腿对比，市值加权](../images/monthly/long_short_vw.png)
+![月频多空对比，市值加权](../images/monthly/long_short_vw.png)
 
 ### 分位结构图：`plot("deciles")`
 
-分位图一次只看一路信号——十个分位走色阶，多空腿用高亮色单独强调。`signal=` 决定画哪一路：
+分位图一次只看一路信号——十个分位走色阶，多空用高亮色单独强调。`signal=` 决定画哪一路：
 
 ```python
 bt.plot("deciles", signal="alpha1")
@@ -471,7 +471,7 @@ cap               float64
 
     信号自带 `fwd_ret` 时工具包直接采用，不做任何再加工。该列若按未复权 `close` 计算，拆股与
     缩股会让它跳变：实测一例中某只股票反向缩股 1:100，价格口径据此算出 +25931% 的单只收益，
-    在 493 只的等权桶里单独贡献 +64% 的组合收益，使该期多空腿从 −1.76% 变成 −141.17%。
+    在 493 只的等权桶里单独贡献 +64% 的组合收益，使该期多空从 −1.76% 变成 −141.17%。
     复权口径 `prod(1 + 日收益) − 1` 天然免疫拆股与除息。口径正确与否在包的职责之外。
 
 ### 起一次回测
@@ -524,7 +524,7 @@ signal_model bucket weight  n_periods  ann_ret   cagr  ann_vol  sharpe  max_draw
 
 ### 指标表：`summary()`
 
-`bucket` 接受列表，多空腿与基准一次取出：
+`bucket` 接受列表，多空与基准一次取出：
 
 ```python
 bt.summary(bucket=["H-L", "REF"]).round(4)
@@ -567,9 +567,9 @@ signal_model bucket weight  n_periods  ann_ret    cagr  ann_vol  sharpe  max_dra
 ```
 
 分位序号与 `ann_ret` 的 Spearman 秩相关为 0.527：单调性主要由低分位一侧贡献，最高分位 D9 回落到
-1.51%，低于 D2 至 D8 的任何一档。多空腿的收益因此几乎全部来自空头腿。
+1.51%，低于 D2 至 D8 的任何一档。多空的收益因此几乎全部来自空头端。
 
-### 多空腿对比图：`plot("long_short", signals=[...])`
+### 多空对比图：`plot("long_short", signals=[...])`
 
 `long_short` 预设默认把所有基准都画上。等权组合应配等权指数，因此用 `signals` 白名单挑出这张图
 该有的那条：
@@ -578,7 +578,7 @@ signal_model bucket weight  n_periods  ann_ret    cagr  ann_vol  sharpe  max_dra
 bt.plot("long_short", weight="EW", signals=["alpha1", "SPX_EW"])
 ```
 
-![日频多空腿与等权指数](../images/daily/long_short_ew.png)
+![日频多空与等权指数](../images/daily/long_short_ew.png)
 
 虚线是基准，样式走 `style.reference_color` 与 `style.reference_linestyle`。换成市值加权那套：
 
@@ -586,7 +586,7 @@ bt.plot("long_short", weight="EW", signals=["alpha1", "SPX_EW"])
 bt.plot("long_short", weight="VW", signals=["alpha1", "SPX_VW"])
 ```
 
-![日频多空腿与市值加权指数](../images/daily/long_short_vw.png)
+![日频多空与市值加权指数](../images/daily/long_short_vw.png)
 
 `signals` 白名单对策略信号与基准名同时生效，因此参与该图的策略必须一并列出。留空则两条基准同图，
 适合只看指数之间差异的场合。

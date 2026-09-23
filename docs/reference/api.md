@@ -48,7 +48,7 @@ ContractError: frame<alpha1>: 缺少必需列 ['date', 'id']；源列为 ['ancho
 | `n_buckets` | int | `10` | 分位桶数 |
 | `min_names` | int | `20` | 单期通过分桶所需的最少标的数 |
 | `weights` | str / list | 按数据决定 | 加权方案，取 `"ew"` / `"vw"` |
-| `long_short` | bool | `True` | 是否构建多空腿 |
+| `long_short` | bool | `True` | 是否构建多空 |
 | `long_short_reverse` | bool | `False` | 反向，即低分位减高分位 |
 | `holding_days` | int | 取 `horizon` | 年化折算用的持有期数，单位随 `frequency` |
 | `forward_return_source` | str | 按数据决定 | `"prices"` 或 `"signals"` |
@@ -128,7 +128,7 @@ bt = alp.backtest(signals=alpha_df, prices=panel_df, horizon=1, frequency="month
 
 ```python
 bt.summary()                    # 全部
-bt.summary(bucket="H-L")        # 只看多空腿
+bt.summary(bucket="H-L")        # 只看多空
 bt.summary(weight="EW")         # 只看等权
 ```
 
@@ -138,8 +138,8 @@ bt.summary(weight="EW")         # 只看等权
 
 | 预设名 | 内容 |
 |---|---|
-| `"long_short"` | 多空腿与外部基准同图对比，带零线 |
-| `"deciles"` | 分位走色阶、多空腿单独强调；桶列表跟随 `n_buckets` |
+| `"long_short"` | 多空与外部基准同图对比，带零线 |
+| `"deciles"` | 分位走色阶、多空单独强调；桶列表跟随 `n_buckets` |
 
 `weight` 留空取首个加权方案。多路信号画分位图时用 `signal` 指定看哪一路，留空取首路。
 其余关键字直接透传给 `ChartSpec`，用于单图临时调整：

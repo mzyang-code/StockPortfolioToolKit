@@ -60,7 +60,7 @@ result = alp.run_pipeline("configs/")                              # 配置目�
 | `RET` | `ret` | 组合收益 |
 | `N_NAMES` | `count` | 成分数量 |
 
-两个特殊桶标签：多空腿为 `H-L`（可由 `engine.long_short.label` 改名），外部基准固定为 `REF`。
+两个特殊桶标签：多空为 `H-L`（可由 `engine.long_short.label` 改名），外部基准固定为 `REF`。
 
 分位桶标签是 `"0"` 到 `"n-1"` 的**字符串**，`"0"` 为 alpha 最低的一组。排序时分位桶按数值升序，`H-L` 与 `REF` 排在最后。
 
@@ -138,7 +138,7 @@ SignalSpec(name="alpha1", frame=alpha_df)                  # 内存
 3. 关联市值，丢弃 `alpha` 或 `fwd_ret` 缺失的行
 4. 每个 (调仓日, 信号) 截面内按 alpha 等频分桶
 5. 逐 (日, 信号, 桶) 对每个加权方案计算 `Σ wᵢ·retᵢ`
-6. 追加多空腿与外部基准行
+6. 追加多空与外部基准行
 
 详细字段说明见 [engine.json 参考](../reference/config-engine.md)。
 
@@ -193,7 +193,7 @@ SignalSpec(name="alpha1", frame=alpha_df)                  # 内存
 
 | 预设 | 等价配置 | 用途 |
 |---|---|---|
-| `long_short` | `buckets=["H-L","REF"]`、`color_mode="palette"` | 多空腿与基准对比 |
+| `long_short` | `buckets=["H-L","REF"]`、`color_mode="palette"` | 多空与基准对比 |
 | `deciles` | 分位桶 + `H-L`、`color_mode="gradient"` | 拆解单一策略的分位结构 |
 
 ```python
@@ -245,17 +245,68 @@ alp.settings.reset()
 `frame` 是内存 DataFrame 的实现键，由 `spec.frame is not None` 自动选中，不需要也不应该写进
 `format`。
 
+### 加一个自己的指标与加权方案
+
+自定义指标实现 `compute(rets, ctx)`：入参是一维简单收益序列与年化上下文（`periods_per_year`、
+`risk_free_rate`），返回一个浮点数。自定义加权器实现 `weights(frame)`：入参是该桶这一期的成分表，
+返回与之等长、和为 1 的权重，无法计算时返回 `None`（该桶收益记 NaN）。
+
 ```python
+import numpy as np
+from alpholio.analyzer import METRICS, Metric
 from alpholio.engine import WEIGHTERS, Weighter
 
+@METRICS.register()
+class Calmar(Metric):
+    name = "calmar"                       # summary 里的列名
+
+    def compute(self, rets, ctx):
+        dd = METRICS.get("max_drawdown")().compute(rets, ctx)
+        return float(rets.mean() * ctx.periods_per_year / abs(dd)) if dd < 0 else float("nan")
+
 @WEIGHTERS.register()
-class InverseVolWeighter(Weighter):
-    name = "inverse_vol"          # 结果表里显示为 INVERSE_VOL
+class SqrtCapWeighter(Weighter):
+    name = "sqrtvw"                       # 结果表里显示为 SQRTVW
 
     def weights(self, frame):
-        w = 1.0 / frame["cap"].to_numpy()
-        return w / w.sum()
+        w = np.sqrt(np.clip(np.nan_to_num(frame["cap"].to_numpy(float)), 0, None))
+        return w / w.sum() if w.sum() > 0 else None
 ```
+
+已注册的名字随时可查：
+
+```python
+METRICS.names()
+```
+
+```
+['ann_ret', 'ann_vol', 'cagr', 'calmar', 'max_drawdown', 'sharpe', 'total_equity']
+```
+
+注册后按名字引用即可，`metrics=` 与 `weights=` 都接受新名字：
+
+```python
+bt = alp.backtest(
+    signals={"alpha1": panel},
+    signal_columns={"date": "date", "id": "id", "alpha": "alpha1", "fwd_ret": "fwd_ret"},
+    prices=panel,
+    price_columns={"date": "date", "id": "id", "cap": "cap"},
+    horizon=1,
+    frequency="monthly",
+    weights=["ew", "sqrtvw"],                                   # 新加权方案
+    metrics=["ann_ret", "sharpe", "max_drawdown", "calmar"],    # 新指标
+)
+bt.summary(bucket="H-L").round(4)
+```
+
+```
+signal_model bucket weight  n_periods  ann_ret  sharpe  max_drawdown  calmar  turnover  ic_mean
+      alpha1    H-L     EW        323   0.1030  0.6552       -0.4599  0.2240    0.4485   0.0294
+      alpha1    H-L SQRTVW        323   0.0564  0.3828       -0.4867  0.1158    0.4485   0.0294
+```
+
+`calmar` 成了 `summary` 的一列，`SQRTVW` 成了 `weight` 的一个取值，包内代码一行未改。JSON 配置里
+同样按名字引用：`"weights": ["ew", "sqrtvw"]`、`"metrics": [..., "calmar"]`。
 
 注册名不区分大小写，重复注册同名项会报错。结果表中的加权方案标签默认取注册名的大写形式。
 

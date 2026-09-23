@@ -1,6 +1,6 @@
 # engine.json
 
-Portfolio Engine 的配置。职责是把标准化后的面板切成分位桶、按加权方案折算成组合收益，并产出多空腿与基准行。
+Portfolio Engine 的配置。职责是把标准化后的面板切成分位桶、按加权方案折算成组合收益，并产出多空与基准行。
 
 对应 `EngineConfig`，可由 `EngineConfig.from_file("configs/engine.json")` 单独加载，也可以用 Python 直接构造。
 走 `backtest()` 时这些字段由函数参数组装，对应关系见 [Python API 参考](api.md)。
@@ -19,8 +19,8 @@ Portfolio Engine 的配置。职责是把标准化后的面板切成分位桶、
 | `weight_options` | `dict` | `{}` | 按方案名传给加权器构造函数的额外参数 |
 | `include_references` | `bool` | `true` | 是否将外部基准纳入结果表 |
 | `reference_lag` | `int` | `1` | 日频基准复利窗口相对锚点的偏移 |
-| `long_short.enabled` | `bool` | `true` | 是否构建多空腿 |
-| `long_short.label` | `str` | `"H-L"` | 多空腿在结果表 `bucket` 列中的取值 |
+| `long_short.enabled` | `bool` | `true` | 是否构建多空 |
+| `long_short.label` | `str` | `"H-L"` | 多空在结果表 `bucket` 列中的取值 |
 | `long_short.reverse` | `bool` | `false` | 反向多空，即低分位减高分位 |
 
 未列出的键会被拒绝：严格校验会报出未知项并附上可用项清单。
@@ -104,11 +104,11 @@ Portfolio Engine 的配置。职责是把标准化后的面板切成分位桶、
 
 | 子字段 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `enabled` | `bool` | `true` | 关闭后结果表中不含多空腿 |
-| `label` | `str` | `"H-L"` | 该腿在 `bucket` 列中的取值 |
+| `enabled` | `bool` | `true` | 关闭后结果表中不含多空 |
+| `label` | `str` | `"H-L"` | 多空在 `bucket` 列中的取值 |
 | `reverse` | `bool` | `false` | `false` 为高桶减低桶，`true` 为低桶减高桶 |
 
-多空腿按 (日, 信号, 加权方案) 对齐相减，`count` 列取两端成分数之和。任一端缺失时该腿为空。
+多空按 (日, 信号, 加权方案) 对齐相减，`count` 列取两端成分数之和。任一端缺失时该期多空为空。
 
 ---
 
